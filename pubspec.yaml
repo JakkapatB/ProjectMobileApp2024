@@ -73,6 +73,7 @@ flutter:
     - assets/images/Solar.png
     - assets/images/Star.png
     - assets/images/Water.png
+    - assets/images/cat.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -88,7 +89,7 @@ flutter:
   fonts:
     - family: Poppins
       fonts:
-        - asset: fonts/Poppins-Black.ttf
+        - asset: fonts/Poppins-Regular.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
