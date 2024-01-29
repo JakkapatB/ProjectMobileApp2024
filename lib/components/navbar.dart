@@ -15,31 +15,18 @@ class Navbar extends StatefulWidget {
 }
 
 class _NavbarState extends State<Navbar> {
-  late PageController _pageController;
-  int selecteIndex = 0;
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
+  int _selectedIndex = 0;
 
+  final List<Widget> _pages = [
+    const Workzone(),
+    const TaskPage(),
+    const Focusfood(),
+    const Profile(),
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            selecteIndex = index;
-          });
-        },
-        children: const [
-          Workzone(),
-          TaskPage(),
-          Focusfood(),
-          Profile(),
-        ],
-      ),
+      body: _pages[_selectedIndex],
       bottomNavigationBar: Container(
         color: HexColor('#FFFFFF'),
         child: Padding(
@@ -50,12 +37,6 @@ class _NavbarState extends State<Navbar> {
               activeColor: HexColor('#FFFFFF'),
               tabBackgroundColor: HexColor('#FFD700'),
               gap: 8,
-              onTabChange: (index) {
-                setState(() {
-                  selecteIndex = index;
-                });
-                _pageController.jumpToPage(index);
-              },
               padding: const EdgeInsets.all(16),
               tabs: const [
                 GButton(
@@ -74,7 +55,13 @@ class _NavbarState extends State<Navbar> {
                   icon: Icons.account_circle_outlined,
                   text: 'Proflie',
                 ),
-              ]),
+              ],
+              selectedIndex: _selectedIndex,
+              onTabChange: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              }),
         ),
       ),
     );

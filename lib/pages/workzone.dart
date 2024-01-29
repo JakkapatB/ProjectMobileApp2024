@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
+import 'package:scroll_snap_list/scroll_snap_list.dart';
 
 class Workzone extends StatefulWidget {
   const Workzone({super.key});
@@ -38,8 +41,15 @@ class WorkzoneState extends State<Workzone> {
           ),
           body: Container(
             width: double.infinity,
+            decoration: BoxDecoration(
+              color: HexColor('#245798'),
+              image: const DecorationImage(
+                image: AssetImage(
+                    'assets/images/Star.png'), // Replace with your image asset
+                fit: BoxFit.cover,
+              ),
+            ),
             //This is the largest box that is the body of the app.
-            color: HexColor('#245798'),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -119,9 +129,96 @@ class WorkzoneState extends State<Workzone> {
                   ),
                 ),
                 //UI work zone and meditate
+                isWorkTimeSelectd
+                    ? isMeditateSelectd
+                        ? const Center(child: Text("ERROR 5555"))
+                        : const Expanded(child: CardHorizontal())
+                    : Container(
+                        color: Colors.yellow,
+                        width: 100,
+                        height: 100,
+                      )
               ],
             ),
           )),
+    );
+  }
+}
+
+class CardHorizontal extends StatefulWidget {
+  const CardHorizontal({super.key});
+
+  @override
+  State<CardHorizontal> createState() => _CardHorizontalState();
+}
+
+class _CardHorizontalState extends State<CardHorizontal> {
+  List<String> images = [
+    'assets/images/Earth.png',
+    'assets/images/Mars.png',
+    'assets/images/Saturn.png',
+    'assets/images/Uranus.png'
+  ];
+  List<String> textheader = ['EART', 'MARS', 'SATURN', 'URANUS'];
+  Widget buildItemList(BuildContext context, int index) {
+    int dataIndex = index % images.length;
+    if (index == images.length) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    return Container(
+      width: 150,
+      margin: const EdgeInsets.only(top: 12.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            height: 150,
+            decoration: BoxDecoration(
+                image: DecorationImage(
+                    image: AssetImage(images[dataIndex]), fit: BoxFit.cover)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'WORK ON ${textheader[dataIndex]}', // You can replace this with your desired text
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: HexColor('#ffffff')),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+              child: ScrollSnapList(
+            itemBuilder: (context, index) => buildItemList(context, index),
+            itemSize: 150,
+            dynamicItemSize: true,
+            onReachEnd: () {
+              Scrollable.ensureVisible(
+                context,
+                alignment: 1.0,
+                duration: const Duration(milliseconds: 300),
+              );
+            },
+            itemCount: images.length,
+            onItemFocus: (int focusedIndex) {
+              print('Item focused: ${focusedIndex + 1}');
+            },
+          )),
+        ],
+      ),
     );
   }
 }
