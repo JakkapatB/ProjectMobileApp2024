@@ -37,6 +37,10 @@ dependencies:
   google_nav_bar: ^5.0.6
   hexcolor: ^3.0.1
   scroll_snap_list: ^0.9.1
+  easy_date_timeline: ^1.0.4
+  flutter_colorpicker: ^1.0.3
+  flutter_material_color_picker: ^1.2.0
+  dropdown_button2: ^2.3.9
 
 dev_dependencies:
   flutter_test:
