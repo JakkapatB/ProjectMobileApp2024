@@ -1,10 +1,9 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:provider/provider.dart';
 import 'package:scroll_snap_list/scroll_snap_list.dart';
-
+import 'package:audioplayers/audioplayers.dart';
 import 'workzone_timer.dart';
 
 class Workzone extends StatefulWidget {
@@ -321,13 +320,21 @@ class Meditate extends StatefulWidget {
 class _MeditateState extends State<Meditate> {
   bool isStart = false;
   final GlobalKey<_CountdonwState> countdownKey = GlobalKey<_CountdonwState>();
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
         Container(
-          margin: EdgeInsets.all(8.0),
-          child: _Countdonw(key: countdownKey),
+          margin: const EdgeInsets.all(8.0),
+          child: _Countdonw(
+            key: countdownKey,
+            onTimerEnd: (value) {
+              setState(() {
+                isStart = value;
+              });
+            },
+          ),
         ),
         Container(
           margin: const EdgeInsets.fromLTRB(0, 12, 0, 8),
@@ -338,72 +345,40 @@ class _MeditateState extends State<Meditate> {
                   image: AssetImage('assets/images/Meditate.png'),
                   fit: BoxFit.cover)),
         ),
-        !isStart
-            ? Container(
-                margin: const EdgeInsets.fromLTRB(0, 24, 0, 8),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      isStart = !isStart;
-                    });
-                    if (isStart) {
-                      countdownKey.currentState?.startTimer();
-                    } else {
-                      countdownKey.currentState?.stopTimer();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                      fixedSize: const Size(240, 60),
-                      backgroundColor: HexColor('#FFD700'),
-                      foregroundColor: HexColor('#ffffff')),
-                  child: const Text('Start',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      )),
-                ),
-              )
-            : Container(
-                margin: const EdgeInsets.fromLTRB(16, 30, 16, 0),
-                height: 65,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: HexColor('#C56BB9'),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                      color: Colors.amber,
-                      width: 50,
-                      height: 50,
-                    ),
-                    const Text('testttttt'),
-                    Row(children: <Widget>[
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.stop_circle_rounded),
-                        iconSize: 28, // Set the desired icon size
-                        color: Colors.white, // Set the desired icon color
-                      ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.volume_off_outlined),
-                        iconSize: 28,
-                        color: Colors.white,
-                      )
-                    ])
-                  ],
-                ),
-              )
+        Container(
+          margin: const EdgeInsets.fromLTRB(0, 24, 0, 8),
+          child: ElevatedButton(
+            onPressed: () {
+              setState(() {
+                isStart = !isStart;
+              });
+              if (isStart) {
+                countdownKey.currentState?.startTimer(resets: false);
+              } else if (!isStart) {
+                countdownKey.currentState?.stopTimer(resets: false);
+                // _player.stop();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+                fixedSize: const Size(240, 60),
+                backgroundColor:
+                    !isStart ? HexColor('#FFD700') : HexColor('#C56BB9'),
+                foregroundColor: HexColor('#ffffff')),
+            child: Text(!isStart ? 'Start' : 'Stop',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                )),
+          ),
+        )
       ],
     );
   }
 }
 
 class _Countdonw extends StatefulWidget {
-  const _Countdonw({super.key});
+  final Function(bool) onTimerEnd;
+  const _Countdonw({super.key, required this.onTimerEnd});
   @override
   _CountdonwState createState() => _CountdonwState();
 }
@@ -414,11 +389,15 @@ class _CountdonwState extends State<_Countdonw> {
   Timer? timer;
   bool isCountdown = true;
   bool isMeditateTime = false;
+  late AudioPlayer _player;
+  bool isMusicPlaying = false; // Track the state of music
+
   @override
   void initState() {
     super.initState();
     meditateTimeDuration = Duration(minutes: 5);
     duration = meditateTimeDuration;
+    _player = AudioPlayer();
   }
 
   void reset() {
@@ -437,6 +416,7 @@ class _CountdonwState extends State<_Countdonw> {
       final seconds = duration.inSeconds + addSeconds;
       if (seconds < 0) {
         timer?.cancel();
+        widget.onTimerEnd(false);
       } else {
         duration = Duration(seconds: seconds);
       }
@@ -457,6 +437,12 @@ class _CountdonwState extends State<_Countdonw> {
     setState(() {
       timer?.cancel();
     });
+  }
+
+  @override
+  void dispose() {
+    _player.dispose(); // Dispose the AudioPlayer instance
+    super.dispose();
   }
 
   @override
@@ -506,6 +492,26 @@ class _CountdonwState extends State<_Countdonw> {
                   icon: const Icon(Icons.restart_alt_outlined),
                   iconSize: 40, // Set the desired icon size
                   color: Colors.white, // Set the desired icon color
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      isMusicPlaying = !isMusicPlaying; // Toggle music state
+                    });
+                    if (isMusicPlaying) {
+                      _player.play(AssetSource(
+                          'audios/In Memory of Jean Talon - Mini Vandals.mp3'));
+                    } else {
+                      _player.stop();
+                    }
+                  },
+                  icon: Icon(
+                    (isMusicPlaying)
+                        ? Icons.volume_mute_outlined
+                        : Icons.volume_off_outlined,
+                  ),
+                  iconSize: 40,
+                  color: Colors.white,
                 )
               ]),
         )

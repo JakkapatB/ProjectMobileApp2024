@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:provider/provider.dart';
@@ -120,6 +121,9 @@ class _CountdonwState extends State<_Countdonw> {
   bool isWorkTime = true;
   bool isBreakTime = false;
   bool isLongBreakTime = false;
+  bool isMusicPlaying = false; // Track the state of music
+  late AudioPlayer _player;
+
   @override
   void initState() {
     super.initState();
@@ -127,6 +131,7 @@ class _CountdonwState extends State<_Countdonw> {
     breakTimeDuration = Duration(minutes: widget.breaktime);
     longBreakTimeDuration = Duration(minutes: widget.longbreaktime);
     duration = workTimeDuration;
+    _player = AudioPlayer();
     startTimer();
     updateCurrentStep(0);
   }
@@ -197,6 +202,7 @@ class _CountdonwState extends State<_Countdonw> {
   }
 
   void startTimer({bool resets = true}) {
+    _player.play(AssetSource('audios/Beep_Short .mp3'));
     if (resets) {
       reset();
     }
@@ -277,8 +283,6 @@ class TimerStepper extends StatefulWidget {
 }
 
 class TimerStepperState extends State<TimerStepper> {
-  // ... other code
-
   @override
   Widget build(BuildContext context) {
     final timerStepperProvider =
