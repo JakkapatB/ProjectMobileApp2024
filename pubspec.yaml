@@ -38,6 +38,8 @@ dependencies:
   hexcolor: ^3.0.1
   scroll_snap_list: ^0.9.1
   fl_chart: 0.66.1
+  provider: ^6.1.1
+  audioplayers: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +80,12 @@ flutter:
     - assets/images/cat.jpg
     - assets/images/Uranus.png
     - assets/images/Google.png
+    - assets/images/work.gif
+    - assets/images/break.gif
+    - assets/images/longbreak.gif
+    - assets/audios/Alarm_Clock.mp3
+    - assets/audios/Beep_Short .mp3
+    - assets/audios/In Memory of Jean Talon - Mini Vandals.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -94,6 +102,9 @@ flutter:
     - family: Poppins
       fonts:
         - asset: fonts/Poppins-Regular.ttf
+    - family: Orbitron
+      fonts:
+        - asset: fonts/Orbitron-VariableFont_wght.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
