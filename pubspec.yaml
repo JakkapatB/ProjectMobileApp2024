@@ -37,6 +37,7 @@ dependencies:
   google_nav_bar: ^5.0.6
   hexcolor: ^3.0.1
   scroll_snap_list: ^0.9.1
+  provider: ^6.1.1
 
 dev_dependencies:
   flutter_test:
@@ -76,6 +77,9 @@ flutter:
     - assets/images/Water.png
     - assets/images/cat.jpg
     - assets/images/Uranus.png
+    - assets/images/work.gif
+    - assets/images/break.gif
+    - assets/images/longbreak.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -92,6 +96,9 @@ flutter:
     - family: Poppins
       fonts:
         - asset: fonts/Poppins-Regular.ttf
+    - family: Orbitron
+      fonts:
+        - asset: fonts/Orbitron-VariableFont_wght.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages

@@ -1,8 +1,9 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
+import 'package:provider/provider.dart';
 import 'package:scroll_snap_list/scroll_snap_list.dart';
+
+import 'workzone_timer.dart';
 
 class Workzone extends StatefulWidget {
   const Workzone({super.key});
@@ -14,7 +15,6 @@ class Workzone extends StatefulWidget {
 class WorkzoneState extends State<Workzone> {
   bool isWorkTimeSelectd = true;
   bool isMeditateSelectd = false;
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -137,7 +137,7 @@ class WorkzoneState extends State<Workzone> {
                         color: Colors.yellow,
                         width: 100,
                         height: 100,
-                      )
+                      ),
               ],
             ),
           )),
@@ -159,7 +159,21 @@ class _CardHorizontalState extends State<CardHorizontal> {
     'assets/images/Saturn.png',
     'assets/images/Uranus.png'
   ];
+  int selectedItemIndex = 0;
   List<String> textheader = ['EART', 'MARS', 'SATURN', 'URANUS'];
+  List<String> textstory = [
+    'The world has a chill atmosphere, easy work. 25-5-15',
+    'Mars works a little hard but is still okay. 45-15-15',
+    'Mars works a little hard but is still okay. 50-10-15',
+    'Mars works a little hard but is still okay. 20-10-15'
+  ];
+  List<List<int>> timer = [
+    [25, 5, 15],
+    [45, 15, 15],
+    [50, 10, 15],
+    [20, 10, 15],
+  ];
+
   Widget buildItemList(BuildContext context, int index) {
     int dataIndex = index % images.length;
     if (index == images.length) {
@@ -167,28 +181,51 @@ class _CardHorizontalState extends State<CardHorizontal> {
         child: CircularProgressIndicator(),
       );
     }
-    return Container(
-      width: 150,
-      margin: const EdgeInsets.only(top: 12.0),
+    bool isSelected = index == selectedItemIndex;
+    return SizedBox(
+      width: 220,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: <Widget>[
           Container(
-            height: 150,
+            height: 220,
             decoration: BoxDecoration(
                 image: DecorationImage(
                     image: AssetImage(images[dataIndex]), fit: BoxFit.cover)),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              'WORK ON ${textheader[dataIndex]}', // You can replace this with your desired text
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: HexColor('#ffffff')),
+          Visibility(
+            visible: isSelected,
+            child: Container(
+              margin: const EdgeInsets.only(top: 16.0),
+              width: 220,
+              child: Column(
+                children: <Widget>[
+                  Visibility(
+                    visible: isSelected,
+                    child: Text(
+                      'WORK ON ${textheader[dataIndex]}',
+                      style: TextStyle(
+                          color: HexColor('#ffffff'),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Visibility(
+                    visible: isSelected,
+                    child: Text(
+                      textstory[dataIndex],
+                      style: TextStyle(
+                        color: HexColor('#ffffff'),
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -196,29 +233,93 @@ class _CardHorizontalState extends State<CardHorizontal> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: <Widget>[
-          Expanded(
-              child: ScrollSnapList(
-            itemBuilder: (context, index) => buildItemList(context, index),
-            itemSize: 150,
-            dynamicItemSize: true,
-            onReachEnd: () {
-              Scrollable.ensureVisible(
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          margin: const EdgeInsets.fromLTRB(0, 8.0, 0, 14.0),
+          child: Column(
+            children: [
+              Text(
+                '${timer[selectedItemIndex][0]}:00',
+                style: TextStyle(
+                    fontFamily: 'Orbitron',
+                    fontSize: 40,
+                    fontWeight: FontWeight.w400,
+                    color: HexColor('#ffffff')),
+              ),
+              const SizedBox(height: 8.0),
+              const Icon(
+                Icons.timelapse_outlined,
+                size: 36,
+                color: Colors.white,
+              )
+            ],
+          ),
+        ),
+        Expanded(
+            child: ScrollSnapList(
+          itemBuilder: (context, index) => buildItemList(context, index),
+          itemSize: 220,
+          dynamicItemSize: true,
+          onReachEnd: () {
+            Scrollable.ensureVisible(
+              context,
+              alignment: 1.0,
+              duration: const Duration(milliseconds: 200),
+            );
+          },
+          itemCount: images.length,
+          onItemFocus: (int focusedIndex) {
+            print('Item focused: ${focusedIndex + 1}');
+            setState(() {
+              selectedItemIndex = focusedIndex;
+            });
+          },
+        )),
+        Container(
+          margin: const EdgeInsets.only(bottom: 12.0),
+          child: ElevatedButton(
+            onPressed: () {
+              Provider.of<MainPageProvider>(context, listen: false).isMainPage =
+                  false;
+              Navigator.push(
                 context,
-                alignment: 1.0,
-                duration: const Duration(milliseconds: 300),
+                MaterialPageRoute(
+                  builder: (context) => WorkzoneTimerPage(
+                    selectedItemIndex: selectedItemIndex,
+                    image: images[selectedItemIndex],
+                    name: textheader[selectedItemIndex],
+                    timerValue: timer[selectedItemIndex],
+                  ),
+                ),
               );
             },
-            itemCount: images.length,
-            onItemFocus: (int focusedIndex) {
-              print('Item focused: ${focusedIndex + 1}');
-            },
-          )),
-        ],
-      ),
+            style: ElevatedButton.styleFrom(
+                fixedSize: const Size(240, 60),
+                backgroundColor: HexColor('#FFD700'),
+                foregroundColor: HexColor('#ffffff')),
+            child: const Text(
+              'Start',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        )
+      ],
     );
+  }
+}
+
+class MainPageProvider extends ChangeNotifier {
+  bool _isMainPage = true;
+
+  bool get isMainPage => _isMainPage;
+
+  set isMainPage(bool value) {
+    _isMainPage = value;
+    notifyListeners();
   }
 }
