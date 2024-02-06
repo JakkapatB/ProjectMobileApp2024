@@ -275,7 +275,7 @@ class _CardHorizontalState extends State<CardHorizontal> {
           },
         )),
         Container(
-          margin: const EdgeInsets.only(bottom: 12.0),
+          margin: const EdgeInsets.only(bottom: 36.0),
           child: ElevatedButton(
             onPressed: () {
               Provider.of<MainPageProvider>(context, listen: false).isMainPage =

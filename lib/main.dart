@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_mobile/components/navbar.dart';
 import 'package:provider/provider.dart';
 
+import 'pages/login.dart';
 import 'pages/workzone.dart';
 import 'pages/workzone_timer.dart';
 
@@ -26,10 +27,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      routes: {
-        Navbar.roueName: (context) => const Navbar(),
-      },
+      home: LoginPage(),
+      // initialRoute: '/',
+      // routes: {
+      //   Navbar.roueName: (context) => const Navbar(),
+      // },
     );
   }
 }

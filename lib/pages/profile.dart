@@ -48,7 +48,7 @@ class _ProfileState extends State<Profile> {
                 child: CircleAvatar(
                   radius: 48.0,
                   backgroundImage: AssetImage(
-                      'assets/images/Meditate.png'), // Replace with your image path
+                      'assets/images/cat.jpg'), // Replace with your image path
                 ),
               ),
               SizedBox(height: 8.0),

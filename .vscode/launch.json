@@ -8,7 +8,7 @@
             "name": "natthaphong_widgets_exercises",
             "request": "launch",
             "type": "dart",
-            "program": "lib/pages/login.dart"
+            "program": "lib/main.dart"
             
         },
         {

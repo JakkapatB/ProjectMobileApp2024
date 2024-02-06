@@ -5,49 +5,36 @@ import 'package:project_mobile/components/label_text.dart';
 
 import 'package:project_mobile/components/navbar.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Login Page Example',
-      theme: ThemeData(fontFamily: 'Poppins'),
-      home: const LoginPage(),
-    );
-  }
-}
-
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Container(
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage('assets/images/Star.png'),
-              fit: BoxFit.contain,
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: 'Poppins'),
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            decoration: BoxDecoration(
+              image: const DecorationImage(
+                image: AssetImage('assets/images/Star.png'),
+                fit: BoxFit.contain,
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0.6, 1.0],
+                colors: [
+                  HexColor(bgColorBlue),
+                  HexColor(colorPink),
+                ],
+              ),
             ),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.6, 1.0],
-              colors: [
-                HexColor(bgColorBlue),
-                HexColor(colorPink),
-              ],
-            ),
+            padding: const EdgeInsets.all(40),
+            child: const LoginForm(),
           ),
-          padding: const EdgeInsets.all(40),
-          child: const LoginForm(),
         ),
       ),
     );
@@ -93,97 +80,25 @@ class _LoginFormState extends State<LoginForm> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLogo(),
-        const LabelText(
-          text: 'Welcome to',
-          fontSize: 36,
-          fontColor: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-        // const SizedBox(height: 8.0),
-        const LabelText(
-          text: 'Your Planet',
-          fontSize: 22,
-          fontColor: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        _buildLogo(widthAndHeight: 200),
         Image.asset('assets/images/Solar.png'),
-        _buildInputField(
-          controller: _usernameController,
-          focusNode: _usernameFocus,
-          hintText: 'Username',
-          nextFocusNode: _passwordFocus,
-        ),
-        SizedBox(height: 16.0),
-        _buildInputField(
-          controller: _passwordController,
-          focusNode: _passwordFocus,
-          hintText: 'Password',
-          isPassword: true,
-          onEditingComplete: () {
-            login();
-          },
-        ),
         const SizedBox(height: 32.0),
-        Column(
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                login();
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: HexColor(colorYellow)),
-              child: const LabelText(
-                text: 'Login',
-                fontSize: 18,
-                fontColor: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            orDivider(),
-            InkWell(
-              onTap: () {
-                setState(() {});
-              },
-              child: Container(
-                padding: EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.0),
-                  color: Colors.white,
-                ),
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/Google.png',
-                      scale: 20,
-                    ),
-                    SizedBox(width: 40),
-                    Text(
-                      'Continue with Google',
-                      style: TextStyle(color: Colors.black, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        _buildInputWidget(),
+        const SizedBox(height: 32.0),
+        _buildButtonLogin()
       ],
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo({required double widthAndHeight}) {
     return Container(
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-      ),
-      child: const LabelText(
-        text: 'FOCUS YOUR LIFE',
-        fontSize: 36,
-        fontColor: Colors.black,
-        fontWeight: FontWeight.bold,
+      width: widthAndHeight,
+      height: widthAndHeight,
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/logo.png'),
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
@@ -229,6 +144,29 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
+  Widget _buildInputWidget() {
+    return Column(
+      children: [
+        _buildInputField(
+          controller: _usernameController,
+          focusNode: _usernameFocus,
+          hintText: 'Username',
+          nextFocusNode: _passwordFocus,
+        ),
+        const SizedBox(height: 16.0),
+        _buildInputField(
+          controller: _passwordController,
+          focusNode: _passwordFocus,
+          hintText: 'Password',
+          isPassword: true,
+          onEditingComplete: () {
+            login();
+          },
+        ),
+      ],
+    );
+  }
+
   Widget orDivider() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 10),
@@ -255,6 +193,52 @@ class _LoginFormState extends State<LoginForm> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildButtonLogin() {
+    return Column(
+      children: [
+        ElevatedButton(
+          onPressed: () {
+            login();
+          },
+          style:
+              ElevatedButton.styleFrom(backgroundColor: HexColor(colorYellow)),
+          child: const LabelText(
+            text: 'Login',
+            fontSize: 18,
+            fontColor: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        orDivider(),
+        InkWell(
+          onTap: () {
+            setState(() {});
+          },
+          child: Container(
+            padding: EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8.0),
+              color: Colors.white,
+            ),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/images/Google.png',
+                  scale: 20,
+                ),
+                SizedBox(width: 40),
+                Text(
+                  'Continue with Google',
+                  style: TextStyle(color: Colors.black, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
