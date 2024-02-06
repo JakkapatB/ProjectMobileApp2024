@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:provider/provider.dart';
@@ -133,11 +135,7 @@ class WorkzoneState extends State<Workzone> {
                     ? isMeditateSelectd
                         ? const Center(child: Text("ERROR 5555"))
                         : const Expanded(child: CardHorizontal())
-                    : Container(
-                        color: Colors.yellow,
-                        width: 100,
-                        height: 100,
-                      ),
+                    : Meditate()
               ],
             ),
           )),
@@ -307,6 +305,209 @@ class _CardHorizontalState extends State<CardHorizontal> {
               ),
             ),
           ),
+        )
+      ],
+    );
+  }
+}
+
+class Meditate extends StatefulWidget {
+  const Meditate({super.key});
+
+  @override
+  _MeditateState createState() => _MeditateState();
+}
+
+class _MeditateState extends State<Meditate> {
+  bool isStart = false;
+  final GlobalKey<_CountdonwState> countdownKey = GlobalKey<_CountdonwState>();
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Container(
+          margin: EdgeInsets.all(8.0),
+          child: _Countdonw(key: countdownKey),
+        ),
+        Container(
+          margin: const EdgeInsets.fromLTRB(0, 12, 0, 8),
+          height: 280,
+          width: 280,
+          decoration: const BoxDecoration(
+              image: DecorationImage(
+                  image: AssetImage('assets/images/Meditate.png'),
+                  fit: BoxFit.cover)),
+        ),
+        !isStart
+            ? Container(
+                margin: const EdgeInsets.fromLTRB(0, 24, 0, 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      isStart = !isStart;
+                    });
+                    if (isStart) {
+                      countdownKey.currentState?.startTimer();
+                    } else {
+                      countdownKey.currentState?.stopTimer();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                      fixedSize: const Size(240, 60),
+                      backgroundColor: HexColor('#FFD700'),
+                      foregroundColor: HexColor('#ffffff')),
+                  child: const Text('Start',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      )),
+                ),
+              )
+            : Container(
+                margin: const EdgeInsets.fromLTRB(16, 30, 16, 0),
+                height: 65,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: HexColor('#C56BB9'),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                      color: Colors.amber,
+                      width: 50,
+                      height: 50,
+                    ),
+                    const Text('testttttt'),
+                    Row(children: <Widget>[
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.stop_circle_rounded),
+                        iconSize: 28, // Set the desired icon size
+                        color: Colors.white, // Set the desired icon color
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.volume_off_outlined),
+                        iconSize: 28,
+                        color: Colors.white,
+                      )
+                    ])
+                  ],
+                ),
+              )
+      ],
+    );
+  }
+}
+
+class _Countdonw extends StatefulWidget {
+  const _Countdonw({super.key});
+  @override
+  _CountdonwState createState() => _CountdonwState();
+}
+
+class _CountdonwState extends State<_Countdonw> {
+  late Duration meditateTimeDuration;
+  late Duration duration;
+  Timer? timer;
+  bool isCountdown = true;
+  bool isMeditateTime = false;
+  @override
+  void initState() {
+    super.initState();
+    meditateTimeDuration = Duration(minutes: 5);
+    duration = meditateTimeDuration;
+  }
+
+  void reset() {
+    setState(() {
+      if (isCountdown) {
+        duration = meditateTimeDuration;
+      } else {
+        duration = const Duration();
+      }
+    });
+  }
+
+  void addTime() {
+    const addSeconds = -1;
+    setState(() {
+      final seconds = duration.inSeconds + addSeconds;
+      if (seconds < 0) {
+        timer?.cancel();
+      } else {
+        duration = Duration(seconds: seconds);
+      }
+    });
+  }
+
+  void startTimer({bool resets = true}) {
+    if (resets) {
+      reset();
+    }
+    timer = Timer.periodic(const Duration(seconds: 1), (context) => addTime());
+  }
+
+  void stopTimer({bool resets = true}) {
+    if (resets) {
+      reset();
+    }
+    setState(() {
+      timer?.cancel();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: <Widget>[
+      buildTime(),
+    ]);
+  }
+
+  Widget buildTime() {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    bool isRunning = timer == null ? false : timer!.isActive;
+    return Column(
+      children: <Widget>[
+        Text(
+          '$minutes:$seconds',
+          style: const TextStyle(
+              fontSize: 48, color: Colors.white, fontFamily: 'Orbitron'),
+        ),
+        Container(
+          margin: const EdgeInsets.all(4.0),
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                IconButton(
+                  onPressed: () {
+                    if (isRunning) {
+                      stopTimer(resets: false);
+                    } else {
+                      startTimer(resets: false);
+                    }
+                  },
+                  icon: Icon(
+                    isRunning
+                        ? Icons.stop_circle_outlined
+                        : Icons.play_circle_outlined,
+                  ),
+                  iconSize: 40, // Set the desired icon size
+                  color: Colors.white, // Set the desired icon color
+                ),
+                IconButton(
+                  onPressed: () {
+                    reset();
+                  },
+                  icon: const Icon(Icons.restart_alt_outlined),
+                  iconSize: 40, // Set the desired icon size
+                  color: Colors.white, // Set the desired icon color
+                )
+              ]),
         )
       ],
     );

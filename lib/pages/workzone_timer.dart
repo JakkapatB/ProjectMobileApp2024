@@ -354,9 +354,9 @@ class _StepContainer extends StatelessWidget {
         ),
         Container(
           margin: const EdgeInsets.only(top: 8.0),
-          child: const Text(
-            'Work Time',
-            style: TextStyle(
+          child: Text(
+            label,
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
               color: Colors.white,
