@@ -159,10 +159,10 @@ class _CardHorizontalState extends State<CardHorizontal> {
   int selectedItemIndex = 0;
   List<String> textheader = ['EART', 'MARS', 'SATURN', 'URANUS'];
   List<String> textstory = [
-    'The world has a chill atmosphere, easy work. 25-5-15',
-    'Mars works a little hard but is still okay. 45-15-15',
-    'Mars works a little hard but is still okay. 50-10-15',
-    'Mars works a little hard but is still okay. 20-10-15'
+    'Work like a worldly person with style. 25-5-15',
+    'Work like a Martian with style. 45-15-15',
+    'Work like a Saturnian with style. 50-10-15',
+    'Work like a Uranus man with style. 20-10-15'
   ];
   List<List<int>> timer = [
     [25, 5, 15],
