@@ -34,46 +34,52 @@ class Focusfood extends StatelessWidget {
             ],
           ),
         ),
-        body: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: HexColor('#245798'),
-            image: const DecorationImage(
-              image: AssetImage(
-                  'assets/images/Star.png'), // Replace with your image asset
-              fit: BoxFit.cover,
+        body: SingleChildScrollView(
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: HexColor('#245798'),
+              image: const DecorationImage(
+                image: AssetImage(
+                    'assets/images/Star.png'), // Replace with your image asset
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                MyDateTimeLine(),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 30, bottom: 30),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        CardBreakfast(),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        CardLunch(),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        CardDinner(),
-                      ],
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  MyDateTimeLine(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 30, bottom: 30),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            height: 15,
+                          ),
+                          CardBreakfast(),
+                          SizedBox(
+                            height: 15,
+                          ),
+                          CardLunch(),
+                          SizedBox(
+                            height: 15,
+                          ),
+                          CardDinner(),
+                        ],
+                      ),
                     ),
-                  ),
-                )
-              ],
-            ),
-          )
-          //`selectedDate` the new date selected.
-          ,
+                  )
+                ],
+              ),
+            )
+            //`selectedDate` the new date selected.
+            ,
+          ),
         ),
       ),
     );

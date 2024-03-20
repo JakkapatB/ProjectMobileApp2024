@@ -157,7 +157,7 @@ class _CardHorizontalState extends State<CardHorizontal> {
     'assets/images/Uranus.png'
   ];
   int selectedItemIndex = 0;
-  List<String> textheader = ['EART', 'MARS', 'SATURN', 'URANUS'];
+  List<String> textheader = ['EARTH', 'MARS', 'SATURN', 'URANUS'];
   List<String> textstory = [
     'Work like a worldly person with style. 25-5-15',
     'Work like a Martian with style. 45-15-15',

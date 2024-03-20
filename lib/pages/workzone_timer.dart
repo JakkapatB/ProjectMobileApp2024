@@ -127,8 +127,8 @@ class _CountdonwState extends State<_Countdonw> {
   @override
   void initState() {
     super.initState();
-    workTimeDuration = Duration(minutes: widget.timerValue);
-    breakTimeDuration = Duration(minutes: widget.breaktime);
+    workTimeDuration = Duration(seconds: 2);
+    breakTimeDuration = Duration(seconds: 1);
     longBreakTimeDuration = Duration(minutes: widget.longbreaktime);
     duration = workTimeDuration;
     _player = AudioPlayer();

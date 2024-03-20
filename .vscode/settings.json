@@ -1,8 +1,11 @@
 {
     "cSpell.words": [
         "firebasedatabase",
+        "firestore",
         "hexcolor",
+        "RGBO",
         "rtdb",
+        "taskempty",
         "worktask"
     ]
 }

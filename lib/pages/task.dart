@@ -1,107 +1,105 @@
-import 'dart:convert';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
-// ignore: depend_on_referenced_packages
-import 'package:http/http.dart' as http;
-// import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MyTasks {
+  final String id;
   final String name;
   final String color;
   bool isSelected;
-  final String time;
+  final int time;
   final DateTime dateTime;
 
   MyTasks(
-      {required this.name,
+      {required this.id,
+      required this.name,
       required this.color,
       this.isSelected = false,
       required this.time,
       required this.dateTime});
 }
 
-const List<String> listTime = <String>['20', '25', '45', '50'];
+final Future<FirebaseApp> firebase = Firebase.initializeApp();
+CollectionReference _taskCollection =
+    FirebaseFirestore.instance.collection("Tasks");
 
 Future<void> sendPostRequest(
   String textController,
   String color,
   bool isSelected,
-  String time,
 ) async {
-  final url = Uri.parse(
-      'https://test-b9609-default-rtdb.asia-southeast1.firebasedatabase.app/task.json');
+  await _taskCollection.add({
+    'name': textController,
+    'color': color,
+    'isSelected': isSelected,
+    'time': 0,
+    'dateTime': DateTime.now(),
+  });
 
-  final response = await http.post(
-    url,
-    body: json.encode({
-      'name': textController,
-      'color': color,
-      'isSelected': isSelected,
-      'time': time,
-      'dateTime': DateTime.now().toString()
-    }),
-  );
-  if (response.statusCode == 200) {
-    // ignore: avoid_print
-    print('Score posted successfully');
-
-    await fetchTasks(); // Fetch Tasks immediately after posting
-  } else {
-    // ignore: avoid_print
-    print('Failed to post score');
-  }
-}
-
-List<MyTasks> tasksDB = [];
-Future<void> fetchTasks() async {
-  final url = Uri.parse(
-      'https://test-b9609-default-rtdb.asia-southeast1.firebasedatabase.app/task.json');
-  final response = await http.get(url);
-
-  if (response.statusCode == 200) {
-    tasksDB.clear(); // Clear existing TasksFB before updating
-    final Map<String, dynamic>? data = json.decode(response.body);
-    if (data != null) {
-      data.forEach((key, value) {
-        tasksDB.add(MyTasks(
-          name: value['name'],
-          color: value['color'],
-          isSelected: value['isSelected'],
-          time: value['time'],
-          dateTime: DateTime.parse(value['dateTime']),
-        ));
-      });
-      // tasksDB.sort((a, b) => b.score.compareTo(a.score));
-
-      // if (mounted) {
-      //   setState(() {});
-      // }
-      tasksDB.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-    }
-    print('tasksBD $tasksDB');
-    print("fetch seccess");
-  } else {
-    // ignore: avoid_print
-    print('Failed to fetch Tasks');
-  }
+  // ignore: avoid_print
+  print('Task added successfully');
 }
 
 class TaskPage extends StatefulWidget {
   const TaskPage({Key? key}) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _TaskPageState createState() => _TaskPageState();
 }
 
 class _TaskPageState extends State<TaskPage> {
-  late Future<void> _fetchTasksFuture;
+  late User _user;
+  late Stream<QuerySnapshot> _taskStream;
+
+  Future<void> deleteTask(MyTasks task) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Users")
+          .doc(_user.uid)
+          .collection("Tasks")
+          .doc(task.id)
+          .delete();
+      // ignore: avoid_print
+      print('Task deleted successfully');
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error deleting task: $e');
+    }
+  }
+
+  Future<void> updateTaskSelection(MyTasks task, bool newValue) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Users")
+          .doc(_user.uid)
+          .collection("Tasks")
+          .doc(task.id)
+          .update({'isSelected': newValue});
+      // ignore: avoid_print
+      print('Task selection updated successfully');
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error updating task selection: $e');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _fetchTasksFuture = fetchTasks();
+    // _fetchTasksFuture = fetchTasks();
+    _user = FirebaseAuth.instance.currentUser!;
+    _taskCollection = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Tasks");
+    _taskStream = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Tasks")
+        .snapshots();
   }
 
   @override
@@ -161,17 +159,31 @@ class _TaskPageState extends State<TaskPage> {
                 const SizedBox(
                   height: 10,
                 ),
-                FutureBuilder<void>(
-                  future: _fetchTasksFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    } else if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    } else {
-                      return TotalTask(tasksDB: tasksDB);
-                    }
-                  },
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: _taskStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        List<MyTasks> tasks = [];
+                        final data = snapshot.data!.docs;
+                        tasks = data.map((doc) {
+                          return MyTasks(
+                            id: doc.id,
+                            name: doc['name'],
+                            color: doc['color'],
+                            isSelected: doc['isSelected'],
+                            time: doc['time'],
+                            dateTime: doc['dateTime'].toDate(),
+                          );
+                        }).toList();
+                        return TotalTask(tasksDB: tasks);
+                      }
+                    },
+                  ),
                 ),
 
                 const SizedBox(
@@ -181,18 +193,42 @@ class _TaskPageState extends State<TaskPage> {
                 const SizedBox(
                   height: 20,
                 ),
-                // MyTaskList(tasksDB: tasksDB),
-                FutureBuilder<void>(
-                  future: _fetchTasksFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    } else if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    } else {
-                      return MyTaskList(tasksDB: tasksDB);
-                    }
-                  },
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: _taskStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        List<MyTasks> tasks = [];
+                        final data = snapshot.data!.docs;
+                        tasks = data.map((doc) {
+                          return MyTasks(
+                            id: doc.id,
+                            name: doc['name'],
+                            color: doc['color'],
+                            isSelected: doc['isSelected'],
+                            time: doc['time'],
+                            dateTime: doc['dateTime'].toDate(),
+                          );
+                        }).toList();
+                        // tasks.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+                        tasks.sort((a, b) {
+                          if (a.isSelected == b.isSelected) {
+                            return b.dateTime.compareTo(a.dateTime);
+                          }
+                          return a.isSelected ? 1 : -1;
+                        });
+                        return MyTaskList(
+                          tasksDB: tasks,
+                          deleteTask: deleteTask,
+                          updateTaskSelection: updateTaskSelection,
+                        );
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
@@ -217,9 +253,9 @@ class _TotalTaskState extends State<TotalTask> {
     int totalTasks = widget.tasksDB.length;
     int completedTasks = widget.tasksDB.where((task) => task.isSelected).length;
     int totalTime = 0;
-    widget.tasksDB.forEach((task) {
-      totalTime += int.parse(task.time);
-    });
+    for (var task in widget.tasksDB) {
+      totalTime += task.time;
+    }
 
     return Row(
       children: [
@@ -277,7 +313,15 @@ class _TotalTaskState extends State<TotalTask> {
 
 class MyTaskList extends StatefulWidget {
   final List<MyTasks> tasksDB;
-  const MyTaskList({Key? key, required this.tasksDB}) : super(key: key);
+  final Function(MyTasks) deleteTask;
+  final Function(MyTasks, bool) updateTaskSelection;
+
+  const MyTaskList(
+      {Key? key,
+      required this.tasksDB,
+      required this.deleteTask,
+      required this.updateTaskSelection})
+      : super(key: key);
 
   @override
   // ignore: library_private_types_in_public_api
@@ -287,8 +331,26 @@ class MyTaskList extends StatefulWidget {
 class _MyTaskListState extends State<MyTaskList> {
   @override
   Widget build(BuildContext context) {
-    if (widget.tasksDB.length == 0) {
-      return Expanded(child: Text('ไม่มา'));
+    if (widget.tasksDB.isEmpty) {
+      return Expanded(
+          child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 105,
+            width: 105,
+            child: Expanded(
+              child: Image.asset('assets/images/taskempty.png'),
+            ),
+          ),
+          const Text(
+            "No tasks yet!",
+            style: TextStyle(
+                fontSize: 22, color: Colors.white, fontWeight: FontWeight.w500),
+          )
+        ],
+      ));
     }
     return Expanded(
       child: SizedBox(
@@ -306,19 +368,34 @@ class _MyTaskListState extends State<MyTaskList> {
               ),
               key: ValueKey(widget.tasksDB[index]),
               margin: const EdgeInsets.only(bottom: 10),
-              // color: Colors.yellow,
               alignment: Alignment.centerLeft,
-              height: 70,
-              child: LabeledCheckbox(
-                label: myTask.name,
-                time: myTask.time,
-                value: myTask.isSelected,
-                onChanged: (bool newValue) {
-                  setState(() {
-                    myTask.isSelected = newValue;
-                  });
-                },
-                padding: const EdgeInsets.all(0),
+              height: 75,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: LabeledCheckbox(
+                      label: myTask.name,
+                      time: myTask.time.toString(),
+                      value: myTask.isSelected,
+                      onChanged: (bool newValue) {
+                        setState(() {
+                          myTask.isSelected = newValue;
+                          widget.updateTaskSelection(myTask, newValue);
+                        });
+                      },
+                      padding: const EdgeInsets.all(0),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    color: const Color.fromRGBO(229, 229, 229, 1),
+                    iconSize: 30,
+                    onPressed: () {
+                      widget.deleteTask(myTask);
+                    },
+                  ),
+                ],
               ),
             );
           },
@@ -355,7 +432,7 @@ class LabeledCheckbox extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Transform.scale(
-              scale: 2.0,
+              scale: 2.2,
               child: Checkbox(
                 fillColor: MaterialStateProperty.resolveWith((states) {
                   if (!states.contains(MaterialState.selected)) {
@@ -452,7 +529,6 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
   final TextEditingController _textController = TextEditingController();
   double selectedSize = 20;
   Color? selectedColor;
-  String? selectedValue;
 
   @override
   Widget build(BuildContext context) {
@@ -465,12 +541,6 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
       backgroundColor: Colors.transparent,
       child: contentBox(context),
     );
-  }
-
-  void setSelectedValue(String? value) {
-    setState(() {
-      selectedValue = value;
-    });
   }
 
   Widget _buildColorActionChip(Color color) {
@@ -515,7 +585,7 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
           ),
           //
           //
-          const SizedBox(height: 10),
+          const SizedBox(height: 30),
           TextField(
             controller: _textController,
             // style: TextStyle(fontSize: 10),
@@ -525,10 +595,7 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
                 contentPadding:
                     EdgeInsets.symmetric(vertical: 0, horizontal: 10)),
           ),
-          const SizedBox(height: 20),
-          DropDownTime(
-            onSelectedValueChanged: setSelectedValue,
-          ),
+
           const SizedBox(height: 20),
           const Row(
             children: [
@@ -550,7 +617,7 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
               _buildColorActionChip(HexColor('#C56BB9')),
               _buildColorActionChip(HexColor('#1B89D9')),
               _buildColorActionChip(HexColor('#E63232')),
-              _buildColorActionChip(HexColor('#FFBD46')),
+              _buildColorActionChip(HexColor('#e89602')),
             ],
           ),
 
@@ -562,12 +629,14 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
                 backgroundColor: Colors.yellow,
               ),
               onPressed: () async {
-                if (selectedColor != null && selectedValue != null) {
-                  await sendPostRequest(_textController.text,
-                      colorToHex(selectedColor!), false, selectedValue!);
-                  await fetchTasks();
+                if (selectedColor != null) {
+                  await sendPostRequest(
+                    _textController.text,
+                    colorToHex(selectedColor!),
+                    false,
+                  );
+                  // await fetchTasks();
 
-                  setState(() {});
                   // ignore: use_build_context_synchronously
                   Navigator.of(context).pop(); // ปิด dialog
                 } else {
@@ -611,81 +680,6 @@ class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class DropDownTime extends StatefulWidget {
-  final Function(String?) onSelectedValueChanged;
-  const DropDownTime({Key? key, required this.onSelectedValueChanged})
-      : super(key: key);
-
-  @override
-  State<DropDownTime> createState() => _DropDownTimeState();
-}
-
-class _DropDownTimeState extends State<DropDownTime> {
-  String dropdownValue = listTime.first;
-  // String? selectedValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField2<String>(
-      isExpanded: true,
-      decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(5),
-        ),
-        // Add more decoration..
-      ),
-      hint: const Text(
-        'Select Time',
-        style: TextStyle(fontSize: 16),
-      ),
-      items: listTime
-          .map((item) => DropdownMenuItem<String>(
-                value: item,
-                child: Text(
-                  '$item minute',
-                  style: const TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ))
-          .toList(),
-      validator: (value) {
-        if (value == null) {
-          return 'Please select Time';
-        }
-        return null;
-      },
-      onChanged: (value) {
-        setState(() {
-          widget.onSelectedValueChanged(value);
-        });
-      },
-      onSaved: (value) {
-        widget.onSelectedValueChanged(value);
-      },
-      buttonStyleData: const ButtonStyleData(
-        padding: EdgeInsets.only(right: 8),
-      ),
-      iconStyleData: const IconStyleData(
-        icon: Icon(
-          Icons.arrow_drop_down,
-          color: Colors.black45,
-        ),
-        iconSize: 24,
-      ),
-      dropdownStyleData: DropdownStyleData(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-        ),
-      ),
-      menuItemStyleData: const MenuItemStyleData(
-        padding: EdgeInsets.symmetric(horizontal: 10),
       ),
     );
   }
