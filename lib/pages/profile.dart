@@ -1,7 +1,11 @@
+import 'dart:ffi';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:project_mobile/bar_graph/bar_graph.dart';
 import 'package:project_mobile/color/color.dart';
+import 'package:project_mobile/service/auth.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -23,61 +27,82 @@ class _ProfileState extends State<Profile> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins'),
       home: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            color: HexColor('#245798'),
-            image: const DecorationImage(
-              image: AssetImage('assets/images/Star.png'),
-              fit: BoxFit.contain,
+        body: SingleChildScrollView(
+          child: Container(
+            decoration: BoxDecoration(
+              color: HexColor('#245798'),
+              image: const DecorationImage(
+                image: AssetImage('assets/images/Star.png'),
+                fit: BoxFit.contain,
+              ),
             ),
-          ),
-          padding: const EdgeInsets.only(top: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 150.0,
-                height: 150.0,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.purple, // Set border color
-                    width: 4.0, // Set border width
+            padding: const EdgeInsets.only(top: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 150.0,
+                  height: 150.0,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.purple, // Set border color
+                      width: 4.0, // Set border width
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 48.0,
+                    backgroundImage: AssetImage(
+                        'assets/images/cat.jpg'), // Replace with your image path
                   ),
                 ),
-                child: CircleAvatar(
-                  radius: 48.0,
-                  backgroundImage: AssetImage(
-                      'assets/images/cat.jpg'), // Replace with your image path
+                SizedBox(height: 8.0),
+                Text(
+                  'User Name',
+                  style: TextStyle(
+                    fontSize: 24.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              SizedBox(height: 8.0),
-              Text(
-                'User Name',
-                style: TextStyle(
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                SizedBox(height: 8.0),
+                _buildStatusBox(),
+                SizedBox(height: 16.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildDataRow('8 h 30 m', 'Work Time'),
+                    _buildLine(),
+                    _buildDataRow('10', 'Tasks Done'),
+                    _buildLine(),
+                    _buildDataRow('5 h', 'Meditate'),
+                  ],
                 ),
-              ),
-              SizedBox(height: 8.0),
-              _buildStatusBox(),
-              SizedBox(height: 16.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildDataRow('8 h 30 m', 'Work Time'),
-                  _buildLine(),
-                  _buildDataRow('10', 'Tasks Done'),
-                  _buildLine(),
-                  _buildDataRow('5 h', 'Meditate'),
-                ],
-              ),
-              SizedBox(height: 20.0),
-              _buildDataGrid(),
-              SizedBox(height: 20.0),
-              _buildGraph(),
-            ],
+                SizedBox(height: 20.0),
+                _buildDataGrid(),
+                SizedBox(height: 20.0),
+                _buildGraph(),
+                InkWell(
+                  onTap: () {
+                    AuthMethods().signOut(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8.0),
+                      color: Colors.red,
+                    ),
+                    child: const Text(
+                      'LOGOUT',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -193,16 +218,16 @@ class _ProfileState extends State<Profile> {
     Widget graph;
     switch (selectedGraph) {
       case 'Time':
-        graph = _buildBarGraph(dataTime);
+        graph = _buildBarGraph(dataTime, selectedGraph);
         break;
       case 'Health':
-        graph = _buildBarGraph(dataHealth);
+        graph = _buildBarGraph(dataHealth, selectedGraph);
         break;
       case 'Task':
-        graph = _buildBarGraph(dataTask);
+        graph = _buildBarGraph(dataTask, selectedGraph);
         break;
       case 'Calories':
-        graph = _buildBarGraph(dataCalories);
+        graph = _buildBarGraph(dataCalories, selectedGraph);
         break;
       default:
         graph = Container();
@@ -211,17 +236,28 @@ class _ProfileState extends State<Profile> {
     return graph;
   }
 
-  Widget _buildBarGraph(List<double> data) {
+  Widget _buildBarGraph(List<double> data, String graphName) {
+    double heightContainer = 150;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
       ),
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(10),
       margin: EdgeInsets.all(20),
-      height: 200,
-      child: MyBarGraph(
-        weeklySummary: data,
+      height: heightContainer,
+      child: Column(
+        children: [
+          Text(
+            graphName,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          MyBarGraph(
+            heightContainer: heightContainer,
+            weeklySummary: data,
+          ),
+        ],
       ),
     );
   }

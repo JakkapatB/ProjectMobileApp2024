@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:project_mobile/color/color.dart';
 import 'package:project_mobile/components/label_text.dart';
 
 import 'package:project_mobile/components/navbar.dart';
+import 'package:project_mobile/service/auth.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -49,30 +51,48 @@ class LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<LoginForm> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
   FocusNode _usernameFocus = FocusNode();
   FocusNode _passwordFocus = FocusNode();
 
+  String email = "", password = "";
+
+  TextEditingController mailController = new TextEditingController();
+  TextEditingController passwordController = new TextEditingController();
+
+  final _formkey = GlobalKey<FormState>();
+
+  userLogin() async {
+    try {
+      await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => Navbar()));
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Colors.orangeAccent,
+            content: Text(
+              "No User Found for that Email",
+              style: TextStyle(fontSize: 18.0),
+            )));
+      } else if (e.code == 'wrong-password') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Colors.orangeAccent,
+            content: Text(
+              "Wrong Password Provided by User",
+              style: TextStyle(fontSize: 18.0),
+            )));
+      }
+    }
+  }
+
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    mailController.dispose();
+    passwordController.dispose();
     _usernameFocus.dispose();
     _passwordFocus.dispose();
     super.dispose();
-  }
-
-  void login() {
-    String username = _usernameController.text;
-    String password = _passwordController.text;
-    if (username == 'admin' && password == '1234') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => Navbar()),
-      );
-    }
   }
 
   @override
@@ -81,7 +101,7 @@ class _LoginFormState extends State<LoginForm> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildLogo(widthAndHeight: 200),
-        Image.asset('assets/images/Solar.png'),
+        // Image.asset('assets/images/Solar.png'),
         const SizedBox(height: 32.0),
         _buildInputWidget(),
         const SizedBox(height: 32.0),
@@ -117,7 +137,13 @@ class _LoginFormState extends State<LoginForm> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: TextField(
+      child: TextFormField(
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please Enter $hintText';
+          }
+          return null;
+        },
         controller: controller,
         focusNode: focusNode,
         obscureText: isPassword,
@@ -145,25 +171,26 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Widget _buildInputWidget() {
-    return Column(
-      children: [
-        _buildInputField(
-          controller: _usernameController,
-          focusNode: _usernameFocus,
-          hintText: 'Username',
-          nextFocusNode: _passwordFocus,
-        ),
-        const SizedBox(height: 16.0),
-        _buildInputField(
-          controller: _passwordController,
-          focusNode: _passwordFocus,
-          hintText: 'Password',
-          isPassword: true,
-          onEditingComplete: () {
-            login();
-          },
-        ),
-      ],
+    return Form(
+      key: _formkey,
+      child: Column(
+        children: [
+          _buildInputField(
+            controller: mailController,
+            focusNode: _usernameFocus,
+            hintText: 'E-mail',
+            nextFocusNode: _passwordFocus,
+          ),
+          const SizedBox(height: 16.0),
+          _buildInputField(
+            controller: passwordController,
+            focusNode: _passwordFocus,
+            hintText: 'Password',
+            isPassword: true,
+            onEditingComplete: () {},
+          ),
+        ],
+      ),
     );
   }
 
@@ -180,10 +207,7 @@ class _LoginFormState extends State<LoginForm> {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: LabelText(
-                text: 'or continue with',
-                fontSize: 16,
-                fontColor: Colors.white),
+            child: LabelText(text: 'or', fontSize: 16, fontColor: Colors.white),
           ),
           Flexible(
             child: Container(
@@ -199,38 +223,53 @@ class _LoginFormState extends State<LoginForm> {
   Widget _buildButtonLogin() {
     return Column(
       children: [
-        ElevatedButton(
-          onPressed: () {
-            login();
+        InkWell(
+          onTap: () {
+            if (_formkey.currentState!.validate()) {
+              setState(() {
+                email = mailController.text;
+                password = passwordController.text;
+              });
+            }
+            userLogin();
           },
-          style:
-              ElevatedButton.styleFrom(backgroundColor: HexColor(colorYellow)),
-          child: const LabelText(
-            text: 'Login',
-            fontSize: 18,
-            fontColor: Colors.white,
-            fontWeight: FontWeight.bold,
+          child: Container(
+            alignment: Alignment.center,
+            padding: EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8.0),
+              color: HexColor(colorYellow),
+            ),
+            width: double.infinity,
+            child: const Text(
+              'LOGIN',
+              style: TextStyle(
+                  // color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         orDivider(),
         InkWell(
           onTap: () {
-            setState(() {});
+            AuthMethods().signInWithGoogle(context);
           },
           child: Container(
-            padding: EdgeInsets.all(8.0),
+            padding: EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8.0),
               color: Colors.white,
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
                   'assets/images/Google.png',
                   scale: 20,
                 ),
-                SizedBox(width: 40),
-                Text(
+                const SizedBox(width: 2),
+                const Text(
                   'Continue with Google',
                   style: TextStyle(color: Colors.black, fontSize: 16),
                 ),
