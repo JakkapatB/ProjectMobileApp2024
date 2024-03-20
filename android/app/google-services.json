@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "467073714785",
+    "project_id": "focusyourlifeapp",
+    "storage_bucket": "focusyourlifeapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:467073714785:android:ded3e3ec1f34b6021d7820",
+        "android_client_info": {
+          "package_name": "com.example.project_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "467073714785-o7hvfvsqpr3p1pnl1bdih2l2eeaab4o0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.project_mobile",
+            "certificate_hash": "9d561793cd20c4431973f0f4386367fbe733c7f4"
+          }
+        },
+        {
+          "client_id": "467073714785-q782t0g8n90dt841q8vc05fgb1o4jvd5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9uFup5-DuM3KSNTgN7RZPGCSz77ooSRk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "467073714785-q782t0g8n90dt841q8vc05fgb1o4jvd5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "467073714785-1vin74v2k4scbf2nelnnum9fpmoh27v5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.projectMobile.RunnerTests"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

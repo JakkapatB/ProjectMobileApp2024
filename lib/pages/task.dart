@@ -1,9 +1,108 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
-import 'package:flutter_material_color_picker/flutter_material_color_picker.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
+// ignore: depend_on_referenced_packages
+import 'package:http/http.dart' as http;
+// import 'package:firebase_database/firebase_database.dart';
 
-class TaskPage extends StatelessWidget {
-  const TaskPage({super.key});
+class MyTasks {
+  final String name;
+  final String color;
+  bool isSelected;
+  final String time;
+  final DateTime dateTime;
+
+  MyTasks(
+      {required this.name,
+      required this.color,
+      this.isSelected = false,
+      required this.time,
+      required this.dateTime});
+}
+
+const List<String> listTime = <String>['20', '25', '45', '50'];
+
+Future<void> sendPostRequest(
+  String textController,
+  String color,
+  bool isSelected,
+  String time,
+) async {
+  final url = Uri.parse(
+      'https://test-b9609-default-rtdb.asia-southeast1.firebasedatabase.app/task.json');
+
+  final response = await http.post(
+    url,
+    body: json.encode({
+      'name': textController,
+      'color': color,
+      'isSelected': isSelected,
+      'time': time,
+      'dateTime': DateTime.now().toString()
+    }),
+  );
+  if (response.statusCode == 200) {
+    // ignore: avoid_print
+    print('Score posted successfully');
+
+    await fetchTasks(); // Fetch Tasks immediately after posting
+  } else {
+    // ignore: avoid_print
+    print('Failed to post score');
+  }
+}
+
+List<MyTasks> tasksDB = [];
+Future<void> fetchTasks() async {
+  final url = Uri.parse(
+      'https://test-b9609-default-rtdb.asia-southeast1.firebasedatabase.app/task.json');
+  final response = await http.get(url);
+
+  if (response.statusCode == 200) {
+    tasksDB.clear(); // Clear existing TasksFB before updating
+    final Map<String, dynamic>? data = json.decode(response.body);
+    if (data != null) {
+      data.forEach((key, value) {
+        tasksDB.add(MyTasks(
+          name: value['name'],
+          color: value['color'],
+          isSelected: value['isSelected'],
+          time: value['time'],
+          dateTime: DateTime.parse(value['dateTime']),
+        ));
+      });
+      // tasksDB.sort((a, b) => b.score.compareTo(a.score));
+
+      // if (mounted) {
+      //   setState(() {});
+      // }
+      tasksDB.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    }
+    print('tasksBD $tasksDB');
+    print("fetch seccess");
+  } else {
+    // ignore: avoid_print
+    print('Failed to fetch Tasks');
+  }
+}
+
+class TaskPage extends StatefulWidget {
+  const TaskPage({Key? key}) : super(key: key);
+
+  @override
+  _TaskPageState createState() => _TaskPageState();
+}
+
+class _TaskPageState extends State<TaskPage> {
+  late Future<void> _fetchTasksFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTasksFuture = fetchTasks();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,273 +110,217 @@ class TaskPage extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins'),
       home: Scaffold(
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: HexColor('#245798'),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: HexColor('#245798'),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'My Task',
+                style: TextStyle(
+                    fontSize: 20,
+                    color: HexColor('#FFFFFF'),
+                    fontWeight: FontWeight.bold),
+              ),
+              const CircleAvatar(
+                backgroundImage: AssetImage('assets/images/cat.jpg'),
+              ),
+            ],
+          ),
+        ),
+        body: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: HexColor('#245798'),
+            image: const DecorationImage(
+              image: AssetImage(
+                  'assets/images/Star.png'), // Replace with your image asset
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.only(bottom: 20, top: 0, left: 20, right: 20),
+            child: Column(
               children: [
-                Text(
-                  'My Task',
-                  style: TextStyle(
-                      fontSize: 20,
-                      color: HexColor('#FFFFFF'),
-                      fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.8,
+                      child: const Text(
+                        "This smart tool is designed to help you better manage task.",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        // textAlign: TextAlign.left,
+                      ),
+                    ),
+                  ],
                 ),
-                const CircleAvatar(
-                  backgroundImage: AssetImage('assets/images/cat.jpg'),
+
+                //
+                const SizedBox(
+                  height: 10,
+                ),
+                FutureBuilder<void>(
+                  future: _fetchTasksFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    } else {
+                      return TotalTask(tasksDB: tasksDB);
+                    }
+                  },
+                ),
+
+                const SizedBox(
+                  height: 30,
+                ),
+                const AddMyTask(),
+                const SizedBox(
+                  height: 20,
+                ),
+                // MyTaskList(tasksDB: tasksDB),
+                FutureBuilder<void>(
+                  future: _fetchTasksFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    } else {
+                      return MyTaskList(tasksDB: tasksDB);
+                    }
+                  },
                 ),
               ],
             ),
           ),
-          body: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: HexColor('#245798'),
-              image: const DecorationImage(
-                image: AssetImage(
-                    'assets/images/Star.png'), // Replace with your image asset
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(
-                  bottom: 20, top: 0, left: 20, right: 20),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: MediaQuery.of(context).size.width * 0.8,
-                        child: const Text(
-                          "This smart tool is designed to help you better manage task.",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                          // textAlign: TextAlign.left,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  //
-                  const SizedBox(
-                    height: 30,
-                  ),
-                  const AddTask(),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  const TaskList(),
-                  const SizedBox(
-                    height: 30,
-                  ),
-
-                  const AddMyWork(),
-
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  const MyWorkList(),
-                  // MyWidget()
-                ],
-              ),
-            ),
-          )),
-    );
-  }
-}
-
-class Task {
-  final String taskName;
-  final String amount;
-  final String startDate;
-  final Color backgroundIcon;
-
-  Task(
-      {required this.taskName,
-      required this.amount,
-      required this.startDate,
-      required this.backgroundIcon});
-}
-
-final List<Task> myTaskData = [
-  Task(
-    taskName: "HomeWork",
-    amount: '2',
-    startDate: '5/2/2567',
-    backgroundIcon: Colors.green,
-  ),
-  Task(
-    taskName: "Project",
-    amount: '100',
-    startDate: '1/2/2567',
-    backgroundIcon: Colors.yellow,
-  ),
-  Task(
-    taskName: "Run100KM",
-    amount: '4',
-    startDate: '20/1/2567',
-    backgroundIcon: Colors.red,
-  ),
-];
-
-class TaskList extends StatefulWidget {
-  const TaskList({Key? key}) : super(key: key);
-
-  @override
-  State<TaskList> createState() => _TaskListState();
-}
-
-class _TaskListState extends State<TaskList> {
-  // Generating dummy data
-  // final List myData = List.generate(3, (index) => '$index');
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 200,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: myTaskData.length,
-        // list item builder
-        itemBuilder: (BuildContext ctx, index) {
-          final task = myTaskData[index];
-          return InkWell(
-            onTap: () {
-              // Handle item click here
-              print('Item clicked: ${task.taskName}');
-            },
-            child: Container(
-              key: ValueKey(myTaskData[index]),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.only(right: 10),
-              // padding: const EdgeInsets.all(10),
-              // color: Colors.white,
-              width: 160,
-              // alignment: Alignment.center,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.only(
-                        top: 10, bottom: 10, right: 10, left: 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: task
-                                .backgroundIcon, // Set your desired background color here
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(
-                                12), // Adjust padding as needed
-                            child: Icon(
-                              Icons.mood,
-                              color: Colors.white,
-                              size: 30,
-                            ), // Set your desired icon color
-                          ),
-                        ),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          task.taskName,
-                          style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(
-                          height: 15,
-                        ),
-                        Text(
-                          'amount: ${task.amount}',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 5,
-                        ),
-                        Text(
-                          '${task.startDate}',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+        ),
       ),
     );
   }
 }
 
-class MyWorkList extends StatefulWidget {
-  const MyWorkList({super.key});
+class TotalTask extends StatefulWidget {
+  final List<MyTasks> tasksDB;
+  const TotalTask({Key? key, required this.tasksDB}) : super(key: key);
+
+  @override
+  State<TotalTask> createState() => _TotalTaskState();
+}
+
+class _TotalTaskState extends State<TotalTask> {
+  @override
+  Widget build(BuildContext context) {
+    int totalTasks = widget.tasksDB.length;
+    int completedTasks = widget.tasksDB.where((task) => task.isSelected).length;
+    int totalTime = 0;
+    widget.tasksDB.forEach((task) {
+      totalTime += int.parse(task.time);
+    });
+
+    return Row(
+      children: [
+        Expanded(
+          child: Image.asset('assets/images/worktask.png'),
+        ),
+        SizedBox(
+          width: 150,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'Tasks',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+                Text(
+                  totalTasks.toString(),
+                  style: const TextStyle(
+                      fontSize: 34,
+                      color: Colors.yellow,
+                      fontWeight: FontWeight.bold),
+                ),
+                const Text(
+                  'Completed',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+                Text(
+                  completedTasks.toString(),
+                  style: const TextStyle(
+                      fontSize: 34,
+                      color: Colors.yellow,
+                      fontWeight: FontWeight.bold),
+                ),
+                const Text(
+                  'Time',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+                Text(
+                  totalTime.toString(),
+                  style: const TextStyle(
+                      fontSize: 34,
+                      color: Colors.yellow,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+}
+
+class MyTaskList extends StatefulWidget {
+  final List<MyTasks> tasksDB;
+  const MyTaskList({Key? key, required this.tasksDB}) : super(key: key);
 
   @override
   // ignore: library_private_types_in_public_api
-  _MyWorkListState createState() => _MyWorkListState();
+  _MyTaskListState createState() => _MyTaskListState();
 }
 
-class _MyWorkListState extends State<MyWorkList> {
-  // Generating dummy data
-  // final List<String> myWorkData = List.generate(5, (index) => 'Task $index');
-  // bool _isSelected = false;
-
+class _MyTaskListState extends State<MyTaskList> {
   @override
   Widget build(BuildContext context) {
+    if (widget.tasksDB.length == 0) {
+      return Expanded(child: Text('ไม่มา'));
+    }
     return Expanded(
       child: SizedBox(
         height: double.infinity,
         child: ListView.builder(
-          itemCount: myWorkData.length,
+          itemCount: widget.tasksDB.length,
           itemBuilder: (context, index) {
-            final myWork = myWorkData[index];
+            final myTask = widget.tasksDB[index];
+            final color = HexColor(widget.tasksDB[index].color);
             return Container(
               padding: const EdgeInsets.only(right: 5, left: 3),
               decoration: BoxDecoration(
-                color: myWork.myworkListColor,
+                color: color,
                 borderRadius: BorderRadius.circular(15),
               ),
-              key: ValueKey(myWorkData[index]),
+              key: ValueKey(widget.tasksDB[index]),
               margin: const EdgeInsets.only(bottom: 10),
               // color: Colors.yellow,
               alignment: Alignment.centerLeft,
-              height: 55,
-              // child: Text(
-              //   myWorkData[index],
-              //   style: const TextStyle(color: Colors.white, fontSize: 20),
-              // ),
+              height: 70,
               child: LabeledCheckbox(
-                label: myWork.myworkName,
-                value: myWork.isSelectedMyWork,
+                label: myTask.name,
+                time: myTask.time,
+                value: myTask.isSelected,
                 onChanged: (bool newValue) {
                   setState(() {
-                    myWork.isSelectedMyWork = newValue;
+                    myTask.isSelected = newValue;
                   });
                 },
                 padding: const EdgeInsets.all(0),
               ),
             );
-            // return ListTile(
-            //   title: Text(myWorkData[index],
-            //       style: TextStyle(color: Colors.white)),
-            // );
           },
         ),
       ),
@@ -286,18 +329,20 @@ class _MyWorkListState extends State<MyWorkList> {
 }
 
 class LabeledCheckbox extends StatelessWidget {
+  final String label;
+  final EdgeInsets padding;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final String time;
+
   const LabeledCheckbox({
     super.key,
     required this.label,
     required this.padding,
     required this.value,
     required this.onChanged,
+    required this.time,
   });
-
-  final String label;
-  final EdgeInsets padding;
-  final bool value;
-  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +355,7 @@ class LabeledCheckbox extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Transform.scale(
-              scale: 1.9,
+              scale: 2.0,
               child: Checkbox(
                 fillColor: MaterialStateProperty.resolveWith((states) {
                   if (!states.contains(MaterialState.selected)) {
@@ -321,7 +366,7 @@ class LabeledCheckbox extends StatelessWidget {
                 side: const BorderSide(
                   color: Colors.white,
                 ),
-                shape: CircleBorder(),
+                shape: const CircleBorder(),
                 value: value,
                 onChanged: (bool? newValue) {
                   onChanged(newValue!);
@@ -329,16 +374,24 @@ class LabeledCheckbox extends StatelessWidget {
                 activeColor: Colors.green,
               ),
             ),
-            SizedBox(
+            const SizedBox(
               width: 7,
             ),
             Expanded(
-                child: Text(
-              label,
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white),
+                child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white),
+                ),
+                Text('$time minute',
+                    style: const TextStyle(color: Colors.white))
+              ],
             )),
           ],
         ),
@@ -347,49 +400,14 @@ class LabeledCheckbox extends StatelessWidget {
   }
 }
 
-class MyWork {
-  final String myworkName;
-  final Color myworkListColor;
-  bool isSelectedMyWork;
-
-  MyWork({
-    required this.myworkName,
-    required this.myworkListColor,
-    this.isSelectedMyWork = false,
-  });
-}
-
-final List<MyWork> myWorkData = [
-  MyWork(
-    myworkName: "Mobile Application",
-    myworkListColor: HexColor('#C56BB9'),
-    isSelectedMyWork: false,
-  ),
-  MyWork(
-    myworkName: "Database",
-    myworkListColor: HexColor('#1B89D9'),
-    isSelectedMyWork: false,
-  ),
-  MyWork(
-    myworkName: "Software Engineer",
-    myworkListColor: HexColor('#E63232'),
-    isSelectedMyWork: false,
-  ),
-  MyWork(
-    myworkName: "Operating System",
-    myworkListColor: HexColor('#FFBD46'),
-    isSelectedMyWork: false,
-  ),
-];
-
-class AddTask extends StatelessWidget {
-  const AddTask({super.key});
+class AddMyTask extends StatelessWidget {
+  const AddMyTask({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Text('Tasks',
+        const Text('My Tasks',
             style: TextStyle(
                 color: Colors.white,
                 fontSize: 26,
@@ -405,18 +423,13 @@ class AddTask extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
-                  return AddTaskDialog(); // Your custom dialog widget
+                  return const AddMyTaskDialog(); // Your custom dialog widget
                 },
               );
             },
             style: ElevatedButton.styleFrom(
                 shape: const CircleBorder(),
-
-                // RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                // Button color
-                backgroundColor: HexColor('#C56BB9'),
-                // Splash color
-                // foregroundColor: Colors.cyan,
+                backgroundColor: HexColor('#FFD700'),
                 padding: const EdgeInsets.only(
                     left: 0, right: 0, top: 0, bottom: 0)),
             child: const Icon(Icons.add_rounded, color: Colors.white, size: 45),
@@ -427,8 +440,19 @@ class AddTask extends StatelessWidget {
   }
 }
 
-class AddTaskDialog extends StatelessWidget {
-  const AddTaskDialog({super.key});
+// ignore: must_be_immutable
+class AddMyTaskDialog extends StatefulWidget {
+  const AddMyTaskDialog({super.key});
+
+  @override
+  State<AddMyTaskDialog> createState() => _AddMyTaskDialogState();
+}
+
+class _AddMyTaskDialogState extends State<AddMyTaskDialog> {
+  final TextEditingController _textController = TextEditingController();
+  double selectedSize = 20;
+  Color? selectedColor;
+  String? selectedValue;
 
   @override
   Widget build(BuildContext context) {
@@ -443,9 +467,40 @@ class AddTaskDialog extends StatelessWidget {
     );
   }
 
+  void setSelectedValue(String? value) {
+    setState(() {
+      selectedValue = value;
+    });
+  }
+
+  Widget _buildColorActionChip(Color color) {
+    return ActionChip(
+      backgroundColor: color,
+      shape: CircleBorder(
+        side: BorderSide(
+          color: selectedColor == color ? Colors.black : color,
+          width: 2,
+        ),
+      ),
+      onPressed: () {
+        setState(() {
+          selectedColor = color;
+        });
+      },
+      label: SizedBox(
+        width: selectedColor == color ? 30 : 20,
+        height: selectedColor == color ? 30 : 20,
+      ),
+    );
+  }
+
+  String colorToHex(Color color) {
+    return '#${color.red.toRadixString(16).padLeft(2, '0')}${color.green.toRadixString(16).padLeft(2, '0')}${color.blue.toRadixString(16).padLeft(2, '0')}';
+  }
+
   Widget contentBox(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(top: 30, bottom: 10, right: 30, left: 30),
+      padding: const EdgeInsets.only(top: 30, bottom: 10, right: 30, left: 30),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.0),
@@ -454,50 +509,28 @@ class AddTaskDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          //Text(
-          //   'Custom Dialog Title',
-          //   style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-          // ),
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.rectangle,
-              borderRadius: BorderRadius.circular(10),
-              color: Colors.green, // Set your desired background color here
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0), // Adjust padding as needed
-              child: Icon(
-                Icons.mood,
-                color: Colors.white,
-                size: 40,
-              ), // Set your desired icon color
-            ),
+          const Text(
+            'My Task',
+            style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Add Task',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 5),
+          //
+          //
+          const SizedBox(height: 10),
           TextField(
+            controller: _textController,
             // style: TextStyle(fontSize: 10),
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'My Task',
                 border: OutlineInputBorder(),
                 contentPadding:
                     EdgeInsets.symmetric(vertical: 0, horizontal: 10)),
           ),
-          SizedBox(height: 20),
-          Row(
+          const SizedBox(height: 20),
+          DropDownTime(
+            onSelectedValueChanged: setSelectedValue,
+          ),
+          const SizedBox(height: 20),
+          const Row(
             children: [
               Expanded(
                 child: Text(
@@ -510,324 +543,56 @@ class AddTaskDialog extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 10),
-          // MaterialColorPicker(
-          //   // onColorChange: (Color color) {
-          //   //   // Handle color changes
-          //   // },
-          //   // selectedColor: Colors.red,
-          //   colors: [
-          //     Colors.red,
-          //     Colors.deepOrange,
-          //     Colors.yellow,
-          //     Colors.lightGreen
-          //   ],
-          // ),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              ActionChip(
-                backgroundColor: Colors.red,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.red,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when red swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-              // SizedBox(width: 10,),
-              ActionChip(
-                backgroundColor: Colors.yellow,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.yellow,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when blue swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-              // SizedBox(width: 10,),
-              ActionChip(
-                backgroundColor: Colors.green,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.green,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when green swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-              ActionChip(
-                backgroundColor: Colors.blue,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.blue,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when green swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
+              _buildColorActionChip(HexColor('#C56BB9')),
+              _buildColorActionChip(HexColor('#1B89D9')),
+              _buildColorActionChip(HexColor('#E63232')),
+              _buildColorActionChip(HexColor('#FFBD46')),
             ],
           ),
-          SizedBox(height: 20),
+
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.yellow,
               ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+              onPressed: () async {
+                if (selectedColor != null && selectedValue != null) {
+                  await sendPostRequest(_textController.text,
+                      colorToHex(selectedColor!), false, selectedValue!);
+                  await fetchTasks();
+
+                  setState(() {});
+                  // ignore: use_build_context_synchronously
+                  Navigator.of(context).pop(); // ปิด dialog
+                } else {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Error'),
+                        content:
+                            const Text('Please select a color and a time.'),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
               },
-              child: Text(
-                'Create',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: HexColor('#245798')),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class AddMyWork extends StatelessWidget {
-  const AddMyWork({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Text('My Work',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.bold)),
-        const SizedBox(
-          width: 10,
-        ),
-        Padding(
-          padding: const EdgeInsets.all(0),
-          child: ElevatedButton(
-            onPressed: () {
-              // Your button logic here
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AddMyWorkDialog(); // Your custom dialog widget
-                },
-              );
-            },
-            style: ElevatedButton.styleFrom(
-                shape: const CircleBorder(),
-
-                // RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                // Button color
-                backgroundColor: HexColor('#FFD700'),
-                // Splash color
-                // foregroundColor: Colors.cyan,
-                padding: const EdgeInsets.only(
-                    left: 0, right: 0, top: 0, bottom: 0)),
-            child: const Icon(Icons.add_rounded, color: Colors.white, size: 45),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class AddMyWorkDialog extends StatelessWidget {
-  const AddMyWorkDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      // Adjust the dialog properties as needed
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: contentBox(context),
-    );
-  }
-
-  Widget contentBox(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(top: 30, bottom: 10, right: 30, left: 30),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'My Work',
-            style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-          ),
-          // Container(
-          //   decoration: BoxDecoration(
-          //     shape: BoxShape.rectangle,
-          //     borderRadius: BorderRadius.circular(10),
-          //     color: Colors.green, // Set your desired background color here
-          //   ),
-          //   child: Padding(
-          //     padding: const EdgeInsets.all(8.0), // Adjust padding as needed
-          //     child: Icon(
-          //       Icons.mood,
-          //       color: Colors.white,
-          //       size: 40,
-          //     ), // Set your desired icon color
-          //   ),
-          // ),
-          SizedBox(height: 20),
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: Text(
-          //         'Add My Work',
-          //         style: TextStyle(
-          //           fontSize: 14,
-          //           fontWeight: FontWeight.w500,
-          //         ),
-          //       ),
-          //     ),
-          //   ],
-          // ),
-          SizedBox(height: 10),
-          TextField(
-            // style: TextStyle(fontSize: 10),
-            decoration: InputDecoration(
-                hintText: 'My Work',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 0, horizontal: 10)),
-          ),
-          SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Color',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10),
-          // MaterialColorPicker(
-          //   // onColorChange: (Color color) {
-          //   //   // Handle color changes
-          //   // },
-          //   // selectedColor: Colors.red,
-          //   colors: [
-          //     Colors.red,
-          //     Colors.deepOrange,
-          //     Colors.yellow,
-          //     Colors.lightGreen
-          //   ],
-          // ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              ActionChip(
-                backgroundColor: Colors.red,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.red,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when red swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-              // SizedBox(width: 10,),
-              ActionChip(
-                backgroundColor: Colors.yellow,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.yellow,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when blue swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-              // SizedBox(width: 10,),
-              ActionChip(
-                backgroundColor: Colors.green,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.green,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when green swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-              ActionChip(
-                backgroundColor: Colors.blue,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: Colors.blue,
-                    width: 1.0,
-                  ),
-                ),
-                onPressed: () {
-                  // Do something when green swatch is selected
-                },
-                label: SizedBox(width: 20, height: 20),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.yellow,
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Add Work',
+              child: const Text(
+                'Add Task',
                 style: TextStyle(color: Colors.black),
               ),
             ),
@@ -846,6 +611,81 @@ class AddMyWorkDialog extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class DropDownTime extends StatefulWidget {
+  final Function(String?) onSelectedValueChanged;
+  const DropDownTime({Key? key, required this.onSelectedValueChanged})
+      : super(key: key);
+
+  @override
+  State<DropDownTime> createState() => _DropDownTimeState();
+}
+
+class _DropDownTimeState extends State<DropDownTime> {
+  String dropdownValue = listTime.first;
+  // String? selectedValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField2<String>(
+      isExpanded: true,
+      decoration: InputDecoration(
+        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(5),
+        ),
+        // Add more decoration..
+      ),
+      hint: const Text(
+        'Select Time',
+        style: TextStyle(fontSize: 16),
+      ),
+      items: listTime
+          .map((item) => DropdownMenuItem<String>(
+                value: item,
+                child: Text(
+                  '$item minute',
+                  style: const TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+              ))
+          .toList(),
+      validator: (value) {
+        if (value == null) {
+          return 'Please select Time';
+        }
+        return null;
+      },
+      onChanged: (value) {
+        setState(() {
+          widget.onSelectedValueChanged(value);
+        });
+      },
+      onSaved: (value) {
+        widget.onSelectedValueChanged(value);
+      },
+      buttonStyleData: const ButtonStyleData(
+        padding: EdgeInsets.only(right: 8),
+      ),
+      iconStyleData: const IconStyleData(
+        icon: Icon(
+          Icons.arrow_drop_down,
+          color: Colors.black45,
+        ),
+        iconSize: 24,
+      ),
+      dropdownStyleData: DropdownStyleData(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+        ),
+      ),
+      menuItemStyleData: const MenuItemStyleData(
+        padding: EdgeInsets.symmetric(horizontal: 10),
       ),
     );
   }
