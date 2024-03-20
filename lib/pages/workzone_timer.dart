@@ -1,96 +1,244 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:provider/provider.dart';
 
 import 'workzone.dart';
 
-class WorkzoneTimerPage extends StatelessWidget {
+class MyTasks {
+  final String id;
+  final String name;
+  final String color;
+  bool isSelected;
+  final int time;
+  final DateTime dateTime;
+
+  MyTasks(
+      {required this.id,
+      required this.name,
+      required this.color,
+      this.isSelected = false,
+      required this.time,
+      required this.dateTime});
+}
+
+final Future<FirebaseApp> firebase = Firebase.initializeApp();
+CollectionReference _taskCollection =
+    FirebaseFirestore.instance.collection("Tasks");
+
+Future<void> sendPostRequest(
+  String textController,
+  String color,
+  bool isSelected,
+) async {
+  await _taskCollection.add({
+    'name': textController,
+    'color': color,
+    'isSelected': isSelected,
+    'time': 0,
+    'dateTime': DateTime.now(),
+  });
+
+  // ignore: avoid_print
+  print('Task added successfully');
+}
+
+class WorkzoneTimerPage extends StatefulWidget {
   final int selectedItemIndex;
   final String image;
   final String name;
   final List<int> timerValue;
+
   const WorkzoneTimerPage({
-    super.key,
+    Key? key,
     required this.selectedItemIndex,
     required this.image,
     required this.name,
     required this.timerValue,
-  });
+  }) : super(key: key);
+
+  @override
+  _WorkzoneTimerPageState createState() => _WorkzoneTimerPageState();
+}
+
+class _WorkzoneTimerPageState extends State<WorkzoneTimerPage> {
+  late Timer _timer;
+  List<String> _workNames = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+    fetchWorkNames(); // Fetch work names from Firebase
+  }
+
+  Future<void> fetchWorkNames() async {
+    // Fetch work names from Firebase and update _workNames
+    try {
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection("Tasks").get();
+      setState(() {
+        _workNames =
+            querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    } catch (e) {
+      print("Error fetching work names: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    // Start the timer to repeatedly show the delayed dialog
+    _timer = Timer.periodic(Duration(hours: 1), (timer) {
+      _showDelayedDialog(context);
+    });
+  }
+
+  Future<void> _showDelayedDialog(BuildContext context) async {
+    await Future.delayed(Duration(seconds: 3)); // Delay for 5 seconds
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Center(child: Text("Water Reminder")),
+          content: Container(
+            width: 200, // Set the width of the container
+            height: 200, // Set the height of the container
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(
+                    'assets/images/Water.png'), // Replace 'assets/image.jpg' with your image path
+                fit: BoxFit
+                    .cover, // Adjust the fit as needed (cover, contain, fill, etc.)
+              ),
+              borderRadius: BorderRadius.circular(
+                  12), // Optional: Add border radius for rounded corners
+              // You can add other decorations like border, boxShadow, etc. here
+            ),
+          ),
+          actions: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  width: double.infinity,
+                  margin: EdgeInsets.only(top: 15),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.yellow,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close the dialog
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text(
+                          'Drink Water',
+                          style: TextStyle(color: Colors.black),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text("Close"),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          backgroundColor: HexColor('#245798'),
-          title: Text(
-            'WORK ON $name',
-            style: TextStyle(
-                fontSize: 20,
-                color: HexColor('#FFFFFF'),
-                fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              // ส่งค่ากลับไปที่หน้าที่เรียก WorkzoneTimerPage ด้วย Navigator.pop
-              Navigator.pop(
-                  context,
-                  Provider.of<MainPageProvider>(context, listen: false)
-                      .isMainPage = true);
-            },
-          ),
-          iconTheme: const IconThemeData(
-            color: Colors.white,
+      appBar: AppBar(
+        backgroundColor: HexColor('#245798'),
+        title: Text(
+          'WORK ON ${widget.name}',
+          style: TextStyle(
+            fontSize: 20,
+            color: HexColor('#FFFFFF'),
+            fontWeight: FontWeight.bold,
           ),
         ),
-        body: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: HexColor('#245798'),
-            image: const DecorationImage(
-              image: AssetImage(
-                  'assets/images/Star.png'), // Replace with your image asset
-              fit: BoxFit.cover,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(
+              context,
+              Provider.of<MainPageProvider>(context, listen: false).isMainPage =
+                  true,
+            );
+          },
+        ),
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
+      ),
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: HexColor('#245798'),
+          image: const DecorationImage(
+            image: AssetImage('assets/images/Star.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: <Widget>[
+            Container(
+              margin: EdgeInsets.all(10),
+              child: TimerStepper(),
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                margin: const EdgeInsets.all(24.0),
-                child: _Countdonw(
-                  timerValue: timerValue[0],
-                  breaktime: timerValue[1],
-                  longbreaktime: timerValue[2],
-                ),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey),
               ),
-              Container(
-                margin: const EdgeInsets.all(12.0),
-                height: 280,
-                width: 280,
-                decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage(image), fit: BoxFit.cover)),
+              width: 300,
+              child: DropDownWork(
+                workNames: _workNames,
               ),
-              Container(
-                margin: const EdgeInsets.all(8.0),
-                child: Text(
-                  'WORK ON $name',
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: HexColor('#FFFFFF'),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(top: 12.0),
+              child: _Countdonw(
+                timerValue: widget.timerValue[0],
+                breaktime: widget.timerValue[1],
+                longbreaktime: widget.timerValue[2],
+                image: widget.image,
               ),
-              const Expanded(
-                child: TimerStepper(),
-              ),
-            ],
-          ),
-        ));
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -98,10 +246,12 @@ class _Countdonw extends StatefulWidget {
   final int timerValue;
   final int breaktime;
   final int longbreaktime;
+  final String image;
   const _Countdonw({
     required this.timerValue,
     required this.breaktime,
     required this.longbreaktime,
+    required this.image,
   });
   @override
   _CountdonwState createState() => _CountdonwState();
@@ -117,18 +267,19 @@ class _CountdonwState extends State<_Countdonw> {
   int numBreakTime = 0;
   int numLongBreaktime = 0;
   int countBreak = 0;
+  int total_work_m = 0;
+  int total_work_s = 0;
   bool isCountdown = true;
   bool isWorkTime = true;
   bool isBreakTime = false;
   bool isLongBreakTime = false;
   bool isMusicPlaying = false; // Track the state of music
   late AudioPlayer _player;
-
   @override
   void initState() {
     super.initState();
-    workTimeDuration = Duration(seconds: 2);
-    breakTimeDuration = Duration(seconds: 1);
+    workTimeDuration = Duration(minutes: widget.timerValue);
+    breakTimeDuration = Duration(minutes: widget.breaktime);
     longBreakTimeDuration = Duration(minutes: widget.longbreaktime);
     duration = workTimeDuration;
     _player = AudioPlayer();
@@ -237,6 +388,35 @@ class _CountdonwState extends State<_Countdonw> {
           style: const TextStyle(
               fontSize: 48, color: Colors.white, fontFamily: 'Orbitron'),
         ),
+        Stack(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(12.0),
+              height: 250,
+              width: 250,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(widget.image),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Center(
+                child: SizedBox(
+                  width: 250, // Adjust the width of the circular timer
+                  height: 250, // Adjust the height of the circular timer
+                  child: CircularTimer(
+                    progress: duration.inSeconds / workTimeDuration.inSeconds,
+                    strokeWidth: 10.0,
+                    color: HexColor('#C56BB9'),
+                    backgroundColor: Colors.grey,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
         Container(
           margin: const EdgeInsets.all(4.0),
           child: Row(
@@ -265,8 +445,35 @@ class _CountdonwState extends State<_Countdonw> {
                   icon: const Icon(Icons.restart_alt_outlined),
                   iconSize: 40, // Set the desired icon size
                   color: Colors.white, // Set the desired icon color
-                )
+                ),
               ]),
+        ),
+        Container(
+          margin: const EdgeInsets.only(bottom: 20, top: 10),
+          child: ElevatedButton(
+            onPressed: () {
+              Duration timeUsed = workTimeDuration - duration;
+              print(
+                  'Time used: ${timeUsed.inHours}:${timeUsed.inMinutes.remainder(60)}:${timeUsed.inSeconds.remainder(60)}');
+              Navigator.pop(
+                context,
+                Provider.of<MainPageProvider>(context, listen: false)
+                    .isMainPage = true,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              fixedSize: const Size(240, 60),
+              backgroundColor: HexColor('#FFD700'),
+              foregroundColor: HexColor('#ffffff'),
+            ),
+            child: const Text(
+              'END',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         )
       ],
     );
@@ -293,24 +500,30 @@ class TimerStepperState extends State<TimerStepper> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
         _StepContainer(
-          imageUrl: 'assets/images/work.gif',
+          imageUrl: currentStep == 0
+              ? 'assets/images/work.gif'
+              : 'assets/images/1.png',
           backgroundColor:
               currentStep == 0 ? HexColor('#FFD700') : HexColor('#D0CBD1'),
-          showImage: currentStep == 0,
           label: 'Work Time',
+          showImage: true,
         ),
         _StepContainer(
-          imageUrl: 'assets/images/break.gif',
+          imageUrl: currentStep == 1
+              ? 'assets/images/break.gif'
+              : 'assets/images/2.png',
           backgroundColor:
               currentStep == 1 ? HexColor('#C56BB9') : HexColor('#D0CBD1'),
-          showImage: currentStep == 1,
+          showImage: true,
           label: 'Break',
         ),
         _StepContainer(
-          imageUrl: 'assets/images/longbreak.gif',
+          imageUrl: currentStep == 2
+              ? 'assets/images/longbreak.gif'
+              : 'assets/images/3.png',
           backgroundColor:
               currentStep == 2 ? HexColor('#333333') : HexColor('#D0CBD1'),
-          showImage: currentStep == 2,
+          showImage: true,
           label: 'Long Break',
         ),
       ],
@@ -403,3 +616,158 @@ class TimerStepperProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+class CircularTimer extends StatelessWidget {
+  final double progress; // Value between 0 and 1 representing progress
+  final double strokeWidth;
+  final Color color;
+  final Color backgroundColor;
+
+  const CircularTimer({
+    required this.progress,
+    this.strokeWidth = 10.0,
+    this.color = Colors.blue,
+    this.backgroundColor = Colors.grey,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _CircularTimerPainter(
+        progress: progress,
+        strokeWidth: strokeWidth,
+        color: color,
+        backgroundColor: backgroundColor,
+      ),
+      size: const Size(350, 350), // Set your desired size
+    );
+  }
+}
+
+class _CircularTimerPainter extends CustomPainter {
+  final double progress;
+  final double strokeWidth;
+  final Color color;
+  final Color backgroundColor;
+
+  _CircularTimerPainter({
+    required this.progress,
+    required this.strokeWidth,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - strokeWidth / 2;
+    final startAngle =
+        -90.0 * (3.141592653589793 / 180); // Start angle at 12 o'clock position
+    final sweepAngle = 360.0 *
+        progress *
+        (3.141592653589793 / 180); // Convert progress to radians
+
+    final backgroundPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    final foregroundPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    // Draw background circle
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    // Draw progress arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      foregroundPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
+  }
+}
+
+class DropDownWork extends StatefulWidget {
+  final List<String> workNames;
+
+  const DropDownWork({Key? key, required this.workNames}) : super(key: key);
+
+  @override
+  State<DropDownWork> createState() => _DropDownWorkState();
+}
+
+class _DropDownWorkState extends State<DropDownWork> {
+  String dropdownValue = '';
+  String? selectedValue;
+  late User _user;
+  late Stream<QuerySnapshot> _taskStream;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.workNames.isNotEmpty) {
+      dropdownValue = widget.workNames[0];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      isExpanded: true,
+      hint: Padding(
+        padding: const EdgeInsets.only(left: 6.0),
+        child: const Text(
+          'Select Work',
+          style: TextStyle(fontSize: 16),
+        ),
+      ),
+      value: dropdownValue,
+      items: widget.workNames.map((item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              item,
+              style: const TextStyle(
+                fontSize: 16,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+      validator: (value) {
+        if (value == null) {
+          return 'Please select work.';
+        }
+        return null;
+      },
+      onChanged: (value) {
+        setState(() {
+          dropdownValue = value!;
+        });
+        // Do something when selected item is changed.
+      },
+      onSaved: (value) {
+        selectedValue = value;
+      },
+    );
+  }
+}
+
+const List<String> workList = <String>[
+  'Work A',
+  'Work B',
+  'Work C',
+  'Work D'
+  // Add your list of work items here
+];
