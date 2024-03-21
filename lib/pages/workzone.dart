@@ -115,7 +115,7 @@ class WorkzoneState extends State<Workzone> {
                                   });
                                 },
                                 child: Text(
-                                  'meditate',
+                                  'Meditate',
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16.0,

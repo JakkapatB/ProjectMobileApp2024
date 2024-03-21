@@ -1,11 +1,86 @@
 import 'dart:ffi';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:project_mobile/bar_graph/bar_graph.dart';
 import 'package:project_mobile/color/color.dart';
 import 'package:project_mobile/service/auth.dart';
+import 'package:project_mobile/service/database.dart';
+
+class Myfood {
+  final String foodName;
+  final String kCal;
+  final String meal;
+  final DateTime day;
+
+  Myfood({
+    required this.foodName,
+    required this.kCal,
+    required this.meal,
+    required this.day,
+  });
+}
+
+final Future<FirebaseApp> firebaseFood = Firebase.initializeApp();
+CollectionReference _foodCollection =
+    FirebaseFirestore.instance.collection("Foods");
+
+Future<void> sendPostRequestFood(
+  int cal,
+  String foodname,
+  String meal_time,
+) async {
+  await _foodCollection.add({
+    'foodName': foodname,
+    'kCal': cal,
+    'meal': meal_time,
+    'day': DateTime.now(),
+  });
+
+  // ignore: avoid_print
+  print('Foods added successfully');
+}
+
+class MyTasks {
+  final String id;
+  final String name;
+  final String color;
+  bool isSelected;
+  final int time;
+  final DateTime dateTime;
+
+  MyTasks(
+      {required this.id,
+      required this.name,
+      required this.color,
+      this.isSelected = false,
+      required this.time,
+      required this.dateTime});
+}
+
+final Future<FirebaseApp> firebaseTask = Firebase.initializeApp();
+CollectionReference _taskCollection =
+    FirebaseFirestore.instance.collection("Tasks");
+
+Future<void> sendPostRequestTask(
+  String textController,
+  String color,
+  bool isSelected,
+) async {
+  await _taskCollection.add({
+    'name': textController,
+    'color': color,
+    'isSelected': isSelected,
+    'time': 0,
+    'dateTime': DateTime.now(),
+  });
+
+  // ignore: avoid_print
+  print('Task added successfully');
+}
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -15,94 +90,178 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  String selectedGraph = 'Time'; // Initial graph
-  List<double> dataTime = [52, 55, 89, 55, 25, 45, 62];
-  List<double> dataHealth = [40, 50, 60, 70, 80, 90, 100];
-  List<double> dataTask = [50, 60, 70, 80, 70, 60, 50];
-  List<double> dataCalories = [100, 90, 80, 70, 60, 50, 40];
+  String selectedGraph = 'Calories';
+
+  late User _user;
+  late Stream<QuerySnapshot> _taskStream;
+  late Stream<QuerySnapshot> _foodStream;
+  double totalTasks = 0;
+  double finishedTasks = 0;
+  double total_cal = 0;
+  List<String> foodNames = [];
+  List<String> foodKcal = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // _fetchTasksFuture = fetchTasks();
+    _user = FirebaseAuth.instance.currentUser!;
+
+    _taskCollection = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Tasks");
+    _taskStream = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Tasks")
+        .snapshots();
+    _foodStream = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Foods")
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
+    print('totalTask $totalTasks');
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins'),
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: Container(
-            decoration: BoxDecoration(
-              color: HexColor('#245798'),
-              image: const DecorationImage(
-                image: AssetImage('assets/images/Star.png'),
-                fit: BoxFit.contain,
+        body: Container(
+          height: MediaQuery.of(context).size.height,
+          decoration: BoxDecoration(
+            color: HexColor('#245798'),
+            image: const DecorationImage(
+              image: AssetImage('assets/images/Star.png'),
+              fit: BoxFit.contain,
+            ),
+          ),
+          padding: const EdgeInsets.only(top: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              StreamBuilder<QuerySnapshot>(
+                stream: _taskStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    List<MyTasks> tasks = [];
+                    final data = snapshot.data!.docs;
+                    tasks = data.map((doc) {
+                      return MyTasks(
+                        id: doc.id,
+                        name: doc['name'],
+                        color: doc['color'],
+                        isSelected: doc['isSelected'],
+                        time: doc['time'],
+                        dateTime: doc['dateTime'].toDate(),
+                      );
+                    }).toList();
+                    // Calculate totalTasks and finishedTasks
+                    totalTasks = tasks.length.toDouble();
+                    finishedTasks = tasks
+                        .where((task) => task.isSelected)
+                        .length
+                        .toDouble();
+
+                    return Container();
+                  }
+                },
               ),
-            ),
-            padding: const EdgeInsets.only(top: 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 150.0,
-                  height: 150.0,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.purple, // Set border color
-                      width: 4.0, // Set border width
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 48.0,
-                    backgroundImage: AssetImage(
-                        'assets/images/cat.jpg'), // Replace with your image path
-                  ),
-                ),
-                SizedBox(height: 8.0),
-                Text(
-                  'User Name',
-                  style: TextStyle(
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 8.0),
-                _buildStatusBox(),
-                SizedBox(height: 16.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildDataRow('8 h 30 m', 'Work Time'),
-                    _buildLine(),
-                    _buildDataRow('10', 'Tasks Done'),
-                    _buildLine(),
-                    _buildDataRow('5 h', 'Meditate'),
-                  ],
-                ),
-                SizedBox(height: 20.0),
-                _buildDataGrid(),
-                SizedBox(height: 20.0),
-                _buildGraph(),
-                InkWell(
-                  onTap: () {
-                    AuthMethods().signOut(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
+              StreamBuilder<QuerySnapshot>(
+                stream: _foodStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    // While data is being fetched, show a loading indicator
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    // If there's an error in fetching data, show an error message
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    List<Myfood> foods = [];
+                    final data = snapshot.data!.docs;
+                    foods = data.map((doc) {
+                      Timestamp timestamp = doc['day'];
+                      DateTime dateTime =
+                          timestamp.toDate(); // Convert Timestamp to DateTime
+                      return Myfood(
+                        foodName: doc['foodName'],
+                        kCal: doc['kCal'].toString(),
+                        meal: doc['meal'],
+                        day: dateTime, // Assign the converted DateTime object
+                      );
+                    }).toList();
+
+                    foodNames = foods.map((food) => food.foodName).toList();
+                    foodKcal = foods.map((food) => food.kCal).toList();
+
+                    return Container();
+                  }
+                },
+              ),
+              Column(
+                children: [
+                  Container(
+                    width: 150.0,
+                    height: 150.0,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8.0),
-                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.purple, // Set border color
+                        width: 4.0, // Set border width
+                      ),
                     ),
-                    child: const Text(
-                      'LOGOUT',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold),
+                    child: CircleAvatar(
+                      radius: 48.0,
+                      backgroundImage: _user?.photoURL != null
+                          ? NetworkImage(_user!.photoURL!)
+                              as ImageProvider<Object>?
+                          : AssetImage(
+                              'assets/images/cat.jpg'), // Default image
                     ),
                   ),
-                ),
-              ],
-            ),
+                  SizedBox(height: 8.0),
+                  Text(
+                    _user?.displayName ?? 'User Name', // Display user name
+                    style: TextStyle(
+                      fontSize: 24.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 12.0),
+                  _buildDataGrid(),
+                  SizedBox(height: 16.0),
+                  _buildGraph(),
+                  SizedBox(height: 16.0),
+                  InkWell(
+                    onTap: () {
+                      AuthMethods().signOut(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30.0),
+                        color: Colors.red,
+                      ),
+                      child: const Text(
+                        'Log out',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            ],
           ),
         ),
       ),
@@ -114,28 +273,6 @@ class _ProfileState extends State<Profile> {
       width: 1,
       height: 50,
       color: Colors.white,
-    );
-  }
-
-  Widget _buildStatusBox() {
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, 5, 20, 5),
-      decoration: BoxDecoration(
-        color: Color.fromARGB(255, 233, 255, 233),
-        border: Border.all(
-          color: Colors.green,
-          width: 2.0,
-        ),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Text(
-        'Good',
-        style: TextStyle(
-          color: Colors.green,
-          fontSize: 18.0,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
     );
   }
 
@@ -171,9 +308,7 @@ class _ProfileState extends State<Profile> {
       physics: NeverScrollableScrollPhysics(),
       childAspectRatio: 3,
       children: [
-        _buildDataBox(Icons.access_time, 'Time'),
-        _buildDataBox(Icons.monitor_heart, 'Health'),
-        _buildDataBox(Icons.work, 'Task'),
+        _buildDataBox(Icons.task, 'Tasks'),
         _buildDataBox(Icons.fastfood_outlined, 'Calories'),
       ],
     );
@@ -214,20 +349,13 @@ class _ProfileState extends State<Profile> {
   }
 
   Widget _buildGraph() {
-    // Replace the following placeholder code with your actual graph implementation
     Widget graph;
     switch (selectedGraph) {
-      case 'Time':
-        graph = _buildBarGraph(dataTime, selectedGraph);
-        break;
-      case 'Health':
-        graph = _buildBarGraph(dataHealth, selectedGraph);
-        break;
-      case 'Task':
-        graph = _buildBarGraph(dataTask, selectedGraph);
+      case 'Tasks':
+        graph = _buildBarGraph(selectedGraph);
         break;
       case 'Calories':
-        graph = _buildBarGraph(dataCalories, selectedGraph);
+        graph = _buildBarGraph(selectedGraph);
         break;
       default:
         graph = Container();
@@ -236,8 +364,8 @@ class _ProfileState extends State<Profile> {
     return graph;
   }
 
-  Widget _buildBarGraph(List<double> data, String graphName) {
-    double heightContainer = 150;
+  Widget _buildBarGraph(String graphName) {
+    double heightContainer = 350;
 
     return Container(
       decoration: BoxDecoration(
@@ -245,17 +373,29 @@ class _ProfileState extends State<Profile> {
         borderRadius: BorderRadius.circular(10),
       ),
       padding: EdgeInsets.all(10),
-      margin: EdgeInsets.all(20),
+      margin: EdgeInsets.symmetric(horizontal: 20),
       height: heightContainer,
+      width: double.infinity,
       child: Column(
         children: [
           Text(
             graphName,
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
           ),
-          MyBarGraph(
-            heightContainer: heightContainer,
-            weeklySummary: data,
+          Visibility(
+            visible: graphName == 'Calories',
+            child: MyPieChartFoods(
+              foodName: foodNames,
+              foodKcal: foodKcal,
+            ),
+          ),
+          Visibility(
+            visible: graphName == 'Tasks',
+            child: MyPieChart(
+              heightContainer: heightContainer,
+              finishedTasks: finishedTasks,
+              totalTasks: totalTasks,
+            ),
           ),
         ],
       ),

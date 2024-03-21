@@ -1,7 +1,44 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
-import 'package:easy_date_timeline/easy_date_timeline.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
+
+class Myfood {
+  final String foodName;
+  final String kCal;
+  final String meal;
+  final DateTime day;
+
+  Myfood({
+    required this.foodName,
+    required this.kCal,
+    required this.meal,
+    required this.day,
+  });
+}
+
+final Future<FirebaseApp> firebase = Firebase.initializeApp();
+CollectionReference _foodCollection =
+    FirebaseFirestore.instance.collection("Foods");
+
+Future<void> sendPostRequest(
+  int cal,
+  String foodname,
+  String meal_time,
+) async {
+  await _foodCollection.add({
+    'foodName': foodname,
+    'kCal': cal,
+    'meal': meal_time,
+    'day': DateTime.now(),
+  });
+
+  // ignore: avoid_print
+  print('Foods added successfully');
+}
 
 class Focusfood extends StatelessWidget {
   const Focusfood({super.key});
@@ -12,7 +49,6 @@ class Focusfood extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'Poppins',
-        // canvasColor: Colors.black87,
       ),
       home: Scaffold(
         appBar: AppBar(
@@ -49,29 +85,17 @@ class Focusfood extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  MyDateTimeLine(),
-                  Expanded(
+                  Align(
+                    alignment:
+                        Alignment.topLeft, // Align to the top left corner
+                    child: Header(), // Wrap the Header widget with Align
+                  ),
+                  Container(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 30, bottom: 30),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            height: 15,
-                          ),
-                          CardBreakfast(),
-                          SizedBox(
-                            height: 15,
-                          ),
-                          CardLunch(),
-                          SizedBox(
-                            height: 15,
-                          ),
-                          CardDinner(),
-                        ],
-                      ),
+                      child: MealCard(),
                     ),
                   )
                 ],
@@ -86,697 +110,508 @@ class Focusfood extends StatelessWidget {
   }
 }
 
-class MyDateTimeLine extends StatefulWidget {
-  const MyDateTimeLine({super.key});
+class Header extends StatefulWidget {
+  const Header({Key? key}) : super(key: key);
 
   @override
-  _MyDateTimeLineState createState() => _MyDateTimeLineState();
+  _HeaderState createState() => _HeaderState();
 }
 
-class _MyDateTimeLineState extends State<MyDateTimeLine> {
+class _HeaderState extends State<Header> {
+  late String formattedDateTime;
+  late String formattedTime;
+  late int total_cal = 0;
+  late User _user;
+  late Stream<QuerySnapshot> _foodStream;
+
   @override
-  Widget build(BuildContext context) {
-    return EasyDateTimeLine(
-      initialDate: DateTime.now(),
-      onDateChange: (selectedDate) {
-        // [selectedDate] the new date selected.
-      },
-      activeColor: HexColor('#C56BB9'),
-      headerProps: EasyHeaderProps(
-        // monthPickerType: MonthPickerType.non,
-        monthStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        selectedDateFormat: SelectedDateFormat.fullDateDMonthAsStrY,
-        selectedDateStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      dayProps: EasyDayProps(
-        inactiveDayNumStyle: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),
-        activeDayNumStyle: TextStyle(
-          fontSize: 30,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-        inactiveDayStrStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: HexColor('#8D8B8D'),
-        ),
-        activeDayStrStyle: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-        inactiveDayDecoration: BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-          color: Colors.white,
-        ),
-        width: 65,
-        height: 100,
-        todayNumStyle: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),
-        todayStrStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: HexColor('#8D8B8D'),
-        ),
-        todayHighlightStyle: TodayHighlightStyle.withBackground,
-        todayHighlightColor: Colors.white,
-        dayStructure: DayStructure.dayNumDayStr,
-      ),
-    );
+  void initState() {
+    super.initState();
+    _user = FirebaseAuth.instance.currentUser!;
+    _foodStream = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Foods")
+        .snapshots();
+
+    updateDateTime(); // Call the function to update date and time
   }
-}
 
-class CardBreakfast extends StatefulWidget {
-  const CardBreakfast({Key? key}) : super(key: key);
+  // Function to update date and time
+  void updateDateTime() {
+    // Get the current date and time
+    DateTime now = DateTime.now();
 
-  @override
-  _CardBreakfastState createState() => _CardBreakfastState();
-}
+    // Format the date and time
+    formattedDateTime = DateFormat('EEEE, MMMM d, y').format(now);
+    formattedTime = DateFormat('h:mm a').format(now);
 
-class _CardBreakfastState extends State<CardBreakfast> {
+    // Update the UI
+    setState(() {});
+
+    // Schedule the next update after 1 minute
+    Timer(Duration(minutes: 1) - Duration(seconds: now.second), updateDateTime);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-          // padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: Colors.white,
-          ),
-          width: MediaQuery.of(context).size.width,
-          height: 120,
-          child: Row(
+    return StreamBuilder<QuerySnapshot>(
+      stream: _foodStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // While data is being fetched, show a loading indicator
+          return CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          // If there's an error in fetching data, show an error message
+          return Text('Error: ${snapshot.error}');
+        } else {
+          List<Myfood> foods = [];
+          final data = snapshot.data!.docs;
+          foods = data.map((doc) {
+            Timestamp timestamp = doc['day'];
+            DateTime dateTime =
+                timestamp.toDate(); // Convert Timestamp to DateTime
+            return Myfood(
+              foodName: doc['foodName'],
+              kCal: doc['kCal'].toString(),
+              meal: doc['meal'],
+              day: dateTime, // Assign the converted DateTime object
+            );
+          }).toList();
+          total_cal =
+              foods.fold(0, (total, food) => total + int.parse(food.kCal));
+          return Column(
             children: [
-              Container(
-                width: 250,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                      top: 10, bottom: 5, left: 10, right: 0),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Breakfast',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 20),
-                        ),
-                        Text(
-                          'Recommended 830-1170 Cal',
-                          style: TextStyle(
-                              fontSize: 14, color: HexColor('#8D8B8D')),
-                        ),
-
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                              primary: Colors.yellow, onPrimary: Colors.black),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AddBreakfastDialog(); // Your custom dialog widget
-                              },
-                            );
-                          },
-                          label: Text("Add",
-                              style: TextStyle(color: Colors.black)),
-                          icon: Icon(Icons.add), //icon data for elevated button
-                        ) //la
-                      ]),
+              Align(
+                alignment: Alignment.topLeft, // Align to the top left corner
+                child: Container(
+                  margin: EdgeInsets.only(top: 10),
+                  child: Text(
+                    formattedDateTime,
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
+              Align(
+                alignment: Alignment.topCenter, // Align to the top left corner
+                child: Container(
+                  margin: EdgeInsets.only(top: 15),
+                  child: Text(
+                    formattedTime,
+                    style: TextStyle(
+                        fontSize: 30,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Orbitron'),
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 20,
+              ),
               Container(
-                width: 120,
-                height: 100,
+                height: 60,
                 decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage('assets/images/BraekFastFood.png'))),
-              )
-            ],
-          )),
-    );
-  }
-}
-
-class AddBreakfastDialog extends StatelessWidget {
-  const AddBreakfastDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      // Adjust the dialog properties as needed
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: contentBox(context),
-    );
-  }
-
-  Widget contentBox(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(top: 30, bottom: 10, right: 30, left: 30),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'BreakFast',
-            style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 20),
-          SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Add Food',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    width: 2,
+                    color: HexColor('#C56BB9'),
                   ),
+                  color: HexColor('#C56BB9'), // เพิ่มบรรทัดนี้เพื่อเพิ่มเส้นขอบ
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Total calories :',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 12.0,
+                    ),
+                    Text(
+                      '$total_cal Kcal',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-          SizedBox(height: 5),
-          TextField(
-            // style: TextStyle(fontSize: 10),
-            decoration: InputDecoration(
-                hintText: 'Food',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 0, horizontal: 10)),
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Calories',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          DropDownCalories(),
-          SizedBox(
-            height: 10,
-          ),
-          SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.yellow,
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Add Food',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: HexColor('#245798')),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CardLunch extends StatefulWidget {
-  const CardLunch({Key? key}) : super(key: key);
-
-  @override
-  _CardLunchState createState() => _CardLunchState();
-}
-
-class _CardLunchState extends State<CardLunch> {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-          // padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: Colors.white,
-          ),
-          width: MediaQuery.of(context).size.width,
-          height: 120,
-          child: Row(
-            children: [
-              Container(
-                width: 120,
-                height: 100,
-                decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage('assets/images/LunchFood.png'))),
-              ),
-              Container(
-                width: 250,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                      top: 10, bottom: 5, left: 10, right: 0),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Breakfast',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 20),
-                        ),
-                        Text(
-                          'Recommended 255-370 Cal',
-                          style: TextStyle(
-                              fontSize: 14, color: HexColor('#8D8B8D')),
-                        ),
-
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                              primary: Colors.yellow, onPrimary: Colors.black),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AddLunchDialog(); // Your custom dialog widget
-                              },
-                            );
-                          },
-                          label: Text("Add",
-                              style: TextStyle(color: Colors.black)),
-                          icon: Icon(Icons.add), //icon data for elevated button
-                        ) //la
-                      ]),
-                ),
-              ),
-            ],
-          )),
-    );
-  }
-}
-
-class AddLunchDialog extends StatelessWidget {
-  const AddLunchDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      // Adjust the dialog properties as needed
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: contentBox(context),
-    );
-  }
-
-  Widget contentBox(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(top: 30, bottom: 10, right: 30, left: 30),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'Lunch',
-            style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 20),
-          SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Add Food',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 5),
-          TextField(
-            // style: TextStyle(fontSize: 10),
-            decoration: InputDecoration(
-                hintText: 'Food',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 0, horizontal: 10)),
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Calories',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          DropDownCalories(),
-          SizedBox(
-            height: 10,
-          ),
-          SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.yellow,
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Add Food',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: HexColor('#245798')),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CardDinner extends StatefulWidget {
-  const CardDinner({Key? key}) : super(key: key);
-
-  @override
-  _CardDinnerState createState() => _CardDinnerState();
-}
-
-class _CardDinnerState extends State<CardDinner> {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-          // padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: Colors.white,
-          ),
-          width: MediaQuery.of(context).size.width,
-          height: 120,
-          child: Row(
-            children: [
-              Container(
-                width: 250,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                      top: 10, bottom: 5, left: 10, right: 0),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Dinner',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 20),
-                        ),
-                        Text(
-                          'Recommended 255-370 Cal',
-                          style: TextStyle(
-                              fontSize: 14, color: HexColor('#8D8B8D')),
-                        ),
-
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                              primary: HexColor('#33D142'),
-                              onPrimary: Colors.white),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AddDinnerDialog(); // Your custom dialog widget
-                              },
-                            );
-                          },
-                          label: Text("Success",
-                              style: TextStyle(color: Colors.white)),
-                          icon:
-                              Icon(Icons.check), //icon data for elevated button
-                        ) //la
-                      ]),
-                ),
-              ),
-              Container(
-                width: 120,
-                height: 100,
-                decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage('assets/images/BraekFastFood.png'))),
-              )
-            ],
-          )),
-    );
-  }
-}
-
-class AddDinnerDialog extends StatelessWidget {
-  const AddDinnerDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      // Adjust the dialog properties as needed
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: contentBox(context),
-    );
-  }
-
-  Widget contentBox(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(top: 30, bottom: 10, right: 30, left: 30),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'Dinner',
-            style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 20),
-          SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Add Food',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 5),
-          TextField(
-            // style: TextStyle(fontSize: 10),
-            decoration: InputDecoration(
-                hintText: 'Food',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 0, horizontal: 10)),
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Calories',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          DropDownCalories(),
-          SizedBox(
-            height: 10,
-          ),
-          SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.yellow,
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Add Food',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: HexColor('#245798')),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class DropDownCalories extends StatefulWidget {
-  const DropDownCalories({super.key});
-
-  @override
-  State<DropDownCalories> createState() => _DropDownCaloriesState();
-}
-
-class _DropDownCaloriesState extends State<DropDownCalories> {
-  String dropdownValue = list.first;
-  String? selectedValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField2<String>(
-      isExpanded: true,
-      decoration: InputDecoration(
-        // Add Horizontal padding using menuItemStyleData.padding so it matches
-        // the menu padding when button's width is not specified.
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(5),
-        ),
-        // Add more decoration..
-      ),
-      hint: const Text(
-        'Select Calories',
-        style: TextStyle(fontSize: 16),
-      ),
-      items: list
-          .map((item) => DropdownMenuItem<String>(
-                value: item,
-                child: Text(
-                  item,
-                  style: const TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ))
-          .toList(),
-      validator: (value) {
-        if (value == null) {
-          return 'Please select gender.';
+          );
         }
-        return null;
       },
-      onChanged: (value) {
-        //Do something when selected item is changed.
-      },
-      onSaved: (value) {
-        selectedValue = value.toString();
-      },
-      buttonStyleData: const ButtonStyleData(
-        padding: EdgeInsets.only(right: 8),
-      ),
-      iconStyleData: const IconStyleData(
-        icon: Icon(
-          Icons.arrow_drop_down,
-          color: Colors.black45,
-        ),
-        iconSize: 24,
-      ),
-      dropdownStyleData: DropdownStyleData(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-        ),
-      ),
-      menuItemStyleData: const MenuItemStyleData(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-      ),
     );
   }
 }
 
-const List<String> list = <String>['25-50', '50-75', '75-100', '100-125'];
+class MealCard extends StatefulWidget {
+  const MealCard({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _MealCardState createState() => _MealCardState();
+}
+
+class _MealCardState extends State<MealCard> {
+  String? selectedFood;
+  int selectedFoodCal = 0;
+  @override
+  Widget build(BuildContext context) {
+    String imagePath = _getImagePath();
+    String food = _getFoods();
+
+    Map<String, int> Food_kcal = {
+      'Vegetable': 90,
+      'Chicken and Vegetables': 339,
+      'Shrimp Pad Thai': 462,
+      'Chicken Pad Thai': 316,
+      'Peanut Dressing': 580,
+      'Chicken Salad': 260,
+      'Flatbread, Thai Chicken': 980,
+      'Thai Chicken Yellow Curry': 391,
+      'Green Curry Tofu': 170,
+      'fish maw': 150,
+      'Shrimp Tom Yum Noodles': 320,
+      'Fried Shrimp with Garlic and Pepper': 235,
+      'Chicken Green Curry': 240,
+      'Beef and basil rice': 622,
+      'Pak Mor Rice Crackers': 26,
+      'Omelet rice': 445,
+      'Crispy pork with basil fried rice': 650,
+      'Chicken and fried egg with basil fried rice': 630,
+      'Kale and Crispy Pork Fried Rice': 670,
+      'Sausage Fried Rice': 520,
+    };
+    List<String> foodList = Food_kcal.keys.toList();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Icon(
+          Icons.timelapse_outlined,
+          size: 36,
+          color: Colors.white,
+        ),
+        Container(
+          margin: EdgeInsets.only(bottom: 25.0),
+          child: Text(
+            food,
+            style: TextStyle(
+              fontSize: 40,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Container(
+          width: MediaQuery.of(context).size.width,
+          height: 250,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle, // Set shape to circle
+            image: DecorationImage(
+              image: AssetImage(imagePath),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        Container(
+          margin: EdgeInsets.only(top: 30.0),
+          child: ElevatedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return Dialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.0),
+                      ),
+                      elevation: 0,
+                      backgroundColor: Colors.transparent,
+                      child: Container(
+                        padding: EdgeInsets.only(
+                            top: 30, bottom: 10, right: 30, left: 30),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16.0),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            DefaultTabController(
+                              length: 2,
+                              child: Column(
+                                children: [
+                                  TabBar(
+                                    tabs: const [
+                                      Tab(
+                                          icon:
+                                              Icon(Icons.text_fields_outlined)),
+                                      Tab(
+                                          icon:
+                                              Icon(Icons.camera_alt_outlined)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    height: 300,
+                                    child: TabBarView(
+                                      children: [
+                                        Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceAround,
+                                            children: <Widget>[
+                                              DropDownFoods(
+                                                value: foodList,
+                                                cal: Food_kcal,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Center(child: Text('Coming soon....')),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      ));
+                },
+              );
+            },
+            style: ElevatedButton.styleFrom(
+                fixedSize: const Size(150, 60),
+                backgroundColor: HexColor('#FFD700'),
+                foregroundColor: HexColor('#ffffff')),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(
+                  Icons.add_circle,
+                  size: 30,
+                ),
+                Text('Food',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    )),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  String _getImagePath() {
+    DateTime now = DateTime.now();
+    int hour = now.hour;
+
+    if (hour >= 6 && hour < 12) {
+      // Morning: Breakfast
+      return 'assets/images/BraekFastFood.png';
+    } else if (hour >= 12 && hour < 18) {
+      // Afternoon: Lunch
+      return 'assets/images/LunchFood.png';
+    } else {
+      // Evening/Night: Dinner
+      return 'assets/images/BraekFastFood.png'; // Use different image for dinner
+    }
+  }
+
+  String _getFoods() {
+    DateTime now = DateTime.now();
+    int hour = now.hour;
+
+    if (hour >= 6 && hour < 12) {
+      // Morning: Breakfast
+      return 'Breakfast Time';
+    } else if (hour >= 12 && hour < 18) {
+      // Afternoon: Lunch
+      return 'Lunch Time ';
+    } else {
+      // Evening/Night: Dinner
+      return 'Dinner Time'; // Use different image for dinner
+    }
+  }
+}
+
+class DropDownFoods extends StatefulWidget {
+  final List<String> value; // Change the type to List<String>
+  final Map<String, int> cal; // Use Map<String, int> for calorie values
+  DropDownFoods({Key? key, required this.value, required this.cal});
+
+  @override
+  State<DropDownFoods> createState() => _DropDownFoodsState();
+}
+
+class _DropDownFoodsState extends State<DropDownFoods> {
+  String? dropdownValue;
+  int food_cal = 0;
+  late String foodName;
+  late User _user;
+  late Stream<QuerySnapshot> _foodStream;
+  @override
+  void initState() {
+    super.initState();
+    // _fetchTasksFuture = fetchTasks();
+    _user = FirebaseAuth.instance.currentUser!;
+    _foodCollection = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Foods");
+    _foodStream = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Foods")
+        .snapshots();
+  }
+
+  String _getFoods() {
+    DateTime now = DateTime.now();
+    int hour = now.hour;
+
+    if (hour >= 6 && hour < 12) {
+      // Morning: Breakfast
+      return 'Breakfast Time';
+    } else if (hour >= 12 && hour < 18) {
+      // Afternoon: Lunch
+      return 'Lunch Time ';
+    } else {
+      // Evening/Night: Dinner
+      return 'Dinner Time'; // Use different image for dinner
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Align(alignment: Alignment.topLeft, child: Text('Food')),
+        SizedBox(
+          height: 10,
+        ),
+        DropdownButtonFormField<String>(
+          isExpanded: true,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+            ),
+          ),
+          hint: Container(
+            padding: EdgeInsets.only(left: 6),
+            child: const Text(
+              'Select Food',
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+          value: dropdownValue,
+          items: widget.value
+              .map((item) => DropdownMenuItem<String>(
+                    value: item,
+                    child: Container(
+                      padding: EdgeInsets.only(left: 6),
+                      child: Text(
+                        item,
+                        style:
+                            const TextStyle(fontSize: 16, color: Colors.black),
+                      ),
+                    ),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              dropdownValue = value;
+              // Lookup food_cal from widget.cal using the selected food
+              food_cal = widget.cal[value] ?? 0;
+              foodName = value!;
+            });
+            // Do something when selected item is changed.
+            print(value);
+            print(food_cal);
+          },
+        ),
+        Container(
+            margin: EdgeInsets.only(top: 12),
+            child:
+                Align(alignment: Alignment.topLeft, child: Text('Calories'))),
+        SizedBox(
+          height: 10,
+        ),
+        Container(
+          width: 200,
+          height: 50,
+          margin: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+              border: Border.all(width: 2, color: Colors.deepPurple),
+              borderRadius: BorderRadius.circular(5.0)),
+          child: Center(
+              child: food_cal > 0
+                  ? Text(
+                      '$food_cal Kcal',
+                      style: TextStyle(color: Colors.black87, fontSize: 18),
+                    )
+                  : Text(
+                      "don't have Calories",
+                      style: TextStyle(color: Colors.black87, fontSize: 18),
+                    )),
+        ),
+        Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(top: 15),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.yellow,
+            ),
+            onPressed: () async {
+              print(food_cal);
+              if (foodName != null) {
+                await sendPostRequest(
+                  food_cal,
+                  foodName,
+                  _getFoods(),
+                );
+              }
+
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text(
+              'Add food',
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: HexColor('#245798')),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

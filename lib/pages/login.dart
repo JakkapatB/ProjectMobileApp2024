@@ -56,8 +56,8 @@ class _LoginFormState extends State<LoginForm> {
 
   String email = "", password = "";
 
-  TextEditingController mailController = new TextEditingController();
-  TextEditingController passwordController = new TextEditingController();
+  TextEditingController mailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
 
   final _formkey = GlobalKey<FormState>();
 
@@ -100,11 +100,10 @@ class _LoginFormState extends State<LoginForm> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLogo(widthAndHeight: 200),
-        // Image.asset('assets/images/Solar.png'),
+        _buildLogo(widthAndHeight: 250),
         const SizedBox(height: 32.0),
         _buildInputWidget(),
-        const SizedBox(height: 32.0),
+        const SizedBox(height: 64.0),
         _buildButtonLogin()
       ],
     );
@@ -131,42 +130,37 @@ class _LoginFormState extends State<LoginForm> {
     FocusNode? nextFocusNode,
     void Function()? onEditingComplete,
   }) {
-    return Container(
-      // padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: TextFormField(
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please Enter $hintText';
-          }
-          return null;
-        },
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: isPassword,
-        decoration: InputDecoration(
-          hintText: hintText,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.red),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.purple, width: 3.0),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
+    return TextFormField(
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please Enter $hintText';
+        }
+        return null;
+      },
+      controller: controller,
+      focusNode: focusNode,
+      obscureText: isPassword,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        hintText: hintText,
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.red),
+          borderRadius: BorderRadius.circular(30.0),
         ),
-        onEditingComplete: () {
-          if (onEditingComplete != null) {
-            onEditingComplete();
-          }
-          if (nextFocusNode != null) {
-            FocusScope.of(context).requestFocus(nextFocusNode);
-          }
-        },
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.purple, width: 3.0),
+          borderRadius: BorderRadius.circular(30.0),
+        ),
       ),
+      onEditingComplete: () {
+        if (onEditingComplete != null) {
+          onEditingComplete();
+        }
+        if (nextFocusNode != null) {
+          FocusScope.of(context).requestFocus(nextFocusNode);
+        }
+      },
     );
   }
 
@@ -187,7 +181,15 @@ class _LoginFormState extends State<LoginForm> {
             focusNode: _passwordFocus,
             hintText: 'Password',
             isPassword: true,
-            onEditingComplete: () {},
+            onEditingComplete: () {
+              if (_formkey.currentState!.validate()) {
+                setState(() {
+                  email = mailController.text;
+                  password = passwordController.text;
+                });
+              }
+              userLogin();
+            },
           ),
         ],
       ),
@@ -237,14 +239,14 @@ class _LoginFormState extends State<LoginForm> {
             alignment: Alignment.center,
             padding: EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8.0),
-              color: HexColor(colorYellow),
+              borderRadius: BorderRadius.circular(30.0),
+              color: HexColor('#FFC700'), //FFC700
             ),
             width: double.infinity,
             child: const Text(
               'LOGIN',
               style: TextStyle(
-                  // color: Colors.white,
+                  color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold),
             ),
@@ -256,22 +258,24 @@ class _LoginFormState extends State<LoginForm> {
             AuthMethods().signInWithGoogle(context);
           },
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(30.0),
               color: Colors.white,
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
                   'assets/images/Google.png',
                   scale: 20,
                 ),
-                const SizedBox(width: 2),
+                const SizedBox(width: 40),
                 const Text(
                   'Continue with Google',
-                  style: TextStyle(color: Colors.black, fontSize: 16),
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
               ],
             ),
