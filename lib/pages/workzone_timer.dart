@@ -67,27 +67,24 @@ class WorkzoneTimerPage extends StatefulWidget {
 
 class _WorkzoneTimerPageState extends State<WorkzoneTimerPage> {
   late Timer _timer;
-  List<String> _workNames = [];
+  late User _user;
+  late Stream<QuerySnapshot> _taskStream;
+  late List<String> _workNames = [];
 
   @override
   void initState() {
     super.initState();
     _startTimer();
-    fetchWorkNames(); // Fetch work names from Firebase
-  }
-
-  Future<void> fetchWorkNames() async {
-    // Fetch work names from Firebase and update _workNames
-    try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection("Tasks").get();
-      setState(() {
-        _workNames =
-            querySnapshot.docs.map((doc) => doc['name'] as String).toList();
-      });
-    } catch (e) {
-      print("Error fetching work names: $e");
-    }
+    _user = FirebaseAuth.instance.currentUser!;
+    _taskCollection = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Tasks");
+    _taskStream = FirebaseFirestore.instance
+        .collection("Users")
+        .doc(_user.uid)
+        .collection("Tasks")
+        .snapshots();
   }
 
   @override
@@ -222,8 +219,27 @@ class _WorkzoneTimerPageState extends State<WorkzoneTimerPage> {
                 border: Border.all(color: Colors.grey),
               ),
               width: 300,
-              child: DropDownWork(
-                workNames: _workNames,
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _taskStream,
+                builder: (BuildContext context,
+                    AsyncSnapshot<QuerySnapshot> snapshot) {
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  }
+
+                  // Process snapshot data
+                  final List<DocumentSnapshot> documents = snapshot.data!.docs;
+                  _workNames.clear();
+                  documents.forEach((doc) {
+                    _workNames.add(doc['name']);
+                  });
+
+                  return DropDownWork(workNames: _workNames);
+                },
               ),
             ),
             Container(
@@ -455,6 +471,7 @@ class _CountdonwState extends State<_Countdonw> {
               Duration timeUsed = workTimeDuration - duration;
               print(
                   'Time used: ${timeUsed.inHours}:${timeUsed.inMinutes.remainder(60)}:${timeUsed.inSeconds.remainder(60)}');
+              print(timeUsed);
               Navigator.pop(
                 context,
                 Provider.of<MainPageProvider>(context, listen: false)
@@ -709,8 +726,7 @@ class DropDownWork extends StatefulWidget {
 class _DropDownWorkState extends State<DropDownWork> {
   String dropdownValue = '';
   String? selectedValue;
-  late User _user;
-  late Stream<QuerySnapshot> _taskStream;
+
   @override
   void initState() {
     super.initState();
@@ -763,11 +779,3 @@ class _DropDownWorkState extends State<DropDownWork> {
     );
   }
 }
-
-const List<String> workList = <String>[
-  'Work A',
-  'Work B',
-  'Work C',
-  'Work D'
-  // Add your list of work items here
-];
